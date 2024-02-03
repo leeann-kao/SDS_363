@@ -1,0 +1,41 @@
+---
+title: "Homework 2"
+author: "Vinny Sriram, Lee-Ann Kao, Jennifer Centa"
+date: "2024-02-03"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**We are working with the Pizza Data Set. The group members are Vinny Sriram, Lee-Ann Kao, and Jennifer Centa.**
+
+```{r}
+library(corrplot)
+library(PerformanceAnalytics)
+library(heplots)
+
+pizza <- read.csv("Pizza.csv")
+pizza2 <- pizza[ ,c("brand", "id", "mois", "prot", "fat", "ash", "sodium", "carb", "cal")]
+pizza2 <- pizza2[complete.cases(pizza2), ]
+dim(pizza2)
+```
+
+### Question 1
+
+```{r}
+source("http://www.reuningscherer.net/multivariate/R/CSQPlot.r.txt")
+CSQPlot(pizza2[,c(-1, -2)], label = "Raw Pizza Data")
+```
+
+### Question 2
+
+```{r}
+corrplot.mixed(cor(pizza2[,c(-1, -2)]), lower.col = "black", upper = "ellipse", tl.col = "black", number.cex = .7, order = "hclust", tl.pos = "lt", tl.cex = .7)
+
+chart.Correlation(pizza2[,c(-1, -2)], histogram = TRUE, pch = 19)
+```
+
+*From the correlation plots it appears that ____ are highly correlated. Because there are many strong relationships, we think that PCA will help to narrow down the number of components/variables.*
+

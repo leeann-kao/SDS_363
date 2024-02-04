@@ -25,17 +25,84 @@ dim(pizza2)
 ### Question 1
 
 ```{r}
+# Box Plot
+boxplot(pizza2$mois, pizza2$prot, pizza2$fat, pizza2$ash,
+        pizza2$sodium, pizza2$carb, pizza2$cal,
+        main = "Box Plots of Pizza Attributes",
+        ylab = "Pizza Attributes",
+        xlab = "Quantities",
+        col = c("red", "blue", "green", "orange", "purple", "pink", "brown"),
+        horizontal = TRUE,
+        cex.axis = 0.7)
+par(mar = c(5, 5, 2, 2))
+axis(2, at = 1:7, labels = c("Moisture", "Protein", "Fat", "Ash", "Sodium", "Carbohydrates", "Calories"), las = 2, cex.axis = 0.7)
+
+# Normal Quantile Plot
 source("http://www.reuningscherer.net/multivariate/R/CSQPlot.r.txt")
-CSQPlot(pizza2[,c(-1, -2)], label = "Raw Pizza Data")
+CSQPlot(pizza2[,c(3:9)], label = "Raw Pizza Data")
+
+
+#Transformations
+pizza2$logfat <- log(pizza2$fat)
+pizza2$logprot <- log(pizza2$prot)
+pizza2$logmois <- log(pizza2$mois)
+pizza2$logcarb <- log(pizza2$carb)
+pizzatrans <- pizza2[, c("brand", "id", "logmois", "logprot", "logfat", "ash", "sodium", "logcarb", "cal")]
+
+boxplot(pizzatrans$logmois, pizzatrans$logprot, pizzatrans$logfat, pizzatrans$ash,
+        pizzatrans$sodium, pizzatrans$logcarb, pizzatrans$cal,
+        main = "Box Plots of Transformed Pizza Attributes",
+        ylab = "Pizza Attributes",
+        xlab = "Quantities",
+        col = c("red", "blue", "green", "orange", "purple", "pink", "brown"),
+        horizontal = TRUE,
+        cex.axis = 0.7)
+par(mar = c(5, 5, 2, 2))
+axis(2, at = 1:7, labels = c("logMoisture", "logProtein", "logFat", "Ash", "Sodium", "logCarbohydrates", "Calories"), las = 2, cex.axis = 0.7)
+
+# Normal Quantile Plot
+CSQPlot(pizzatrans[,c(3:9)], label = "Transformed Pizza Data")
+
+cqplot(pizza2[,c(3:9)], main = "World Bank Data")
+cqplot(pizzatrans[,c(3:9)], main = "World Bank Data")
+
 ```
 
 ### Question 2
 
 ```{r}
-corrplot.mixed(cor(pizza2[,c(-1, -2)]), lower.col = "black", upper = "ellipse", tl.col = "black", number.cex = .7, order = "hclust", tl.pos = "lt", tl.cex = .7)
+corrplot.mixed(cor(pizza2[,c(-3:9)]), lower.col = "black", upper = "ellipse", tl.col = "black", number.cex = .7, order = "hclust", tl.pos = "lt", tl.cex = .7)
 
-chart.Correlation(pizza2[,c(-1, -2)], histogram = TRUE, pch = 19)
+chart.Correlation(pizza2[,c(3:9)], histogram = TRUE, pch = 19)
+
+corrplot.mixed(cor(pizzatrans[,c(3:9)]), lower.col = "black", upper = "ellipse", tl.col = "black", number.cex = .7, order = "hclust", tl.pos = "lt", tl.cex = .7)
+
+chart.Correlation(pizzatrans[,c(3:9)], histogram = TRUE, pch = 19)
 ```
 
 *From the correlation plots it appears that ____ are highly correlated. Because there are many strong relationships, we think that PCA will help to narrow down the number of components/variables.*
+
+### Question 3
+
+```{r}
+pizza_standardized <- pizza2[, c(3:9)]
+pizza2_standardized <- scale(pizza_standardized)
+(cor_matrix <- cor(pizza_standardized))
+
+pc1 <- princomp(pizza2[, c(3:9)], cor = TRUE)
+names(pc1)
+summary(pc1)
+print(pc1$loadings, cutoff = 0, digits = 2)
+
+round(pc1$sdev^2,2)
+
+screeplot(pc1, type = "lines", col = "red", lwd = 2, pch = 19, cex = 1.2, 
+          main = "Scree Plot of Raw Pizza Data")
+
+source("http://www.reuningscherer.net/multivariate/R/parallel.r.txt")
+
+parallelplot(pc1)
+```
+
+
 

@@ -1,0 +1,137 @@
+---
+title: "Homework 2"
+author: "Vinny Sriram, Lee-Ann Kao, Jennifer Centa"
+date: "2024-02-03"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**We are working with the Pizza Data Set. The group members are Vinny Sriram, Lee-Ann Kao, and Jennifer Centa.**
+
+```{r}
+library(corrplot)
+library(PerformanceAnalytics)
+library(heplots)
+
+pizza <- read.csv("Pizza.csv")
+pizza2 <- pizza[ ,c("brand", "id", "mois", "prot", "fat", "ash", "sodium", "carb", "cal")]
+pizza2 <- pizza2[complete.cases(pizza2), ]
+pizza2
+dim(pizza2)
+```
+
+
+### Question 1
+
+```{r}
+# Box Plot
+boxplot(pizza2$mois, pizza2$prot, pizza2$fat, pizza2$ash,
+        pizza2$sodium, pizza2$carb, pizza2$cal,
+        main = "Box Plots of Pizza Attributes",
+        ylab = "Pizza Attributes",
+        xlab = "Quantities",
+        col = c("red", "blue", "green", "orange", "purple", "pink", "brown"),
+        horizontal = TRUE,
+        cex.axis = 0.7)
+par(mar = c(5, 5, 2, 2))
+axis(2, at = 1:7, labels = c("Moisture", "Protein", "Fat", "Ash", "Sodium", "Carbohydrates", "Calories"), las = 2, cex.axis = 0.7)
+
+
+# Example Histograms & Normal Quantile plots
+source("http://www.reuningscherer.net/s&ds230/Rfuncs/regJDRS.txt")
+hist(pizza2$mois, main = "Histogram of Pizza Sample Moisture", xlab ="Moisture", col = "magenta", breaks = 10)
+qqPlot(pizza2$mois, main = "Normal Quantile Plot of Pizza Sample Moisture", ylab = "Moisutre", pch = 19)
+library(ggplot2)
+library(plyr)
+p <- ggplot(pizza2, aes(x=mois, fill = brand)) + geom_histogram(bins = 75) + 
+  labs(title="Pizza Sample Moisture, by Brand", x="Moisture")
+p
+
+
+#Transformations
+pizza2$logfat <- log(pizza2$fat)
+pizza2$logsodium <- log(pizza2$sodium)
+pizza2$logcal <- log(pizza2$cal)
+pizzatrans <- pizza2[, c("brand", "id", "mois", "prot", "logfat", "ash", "logsodium", "carb", "logcal")]
+```
+*It is very clear to see that our data does not have a multivariate normal distribution. Our boxplots show relatively centered data for Carbohydrates, Calories, and Moisture, but skewed right data for Ash, Fat (considering the many "outliers"), and Protein. Sodium is also highly skewed left. Upon further examination through histograms and normal quantile plots of univariate data, even data that appears to be centered either follows more of a uniform or U-shaped distribution rather than a normal distribution. We provided a sample of the histograms and normal quantile plots that we made for each nutrient, the majority of which were not normal.*
+*We investigated this non-normality further with the hypothesis that pizza brand was responsible for the wide variation in data. We plotted a histogram of several variables with different colors by brand, revealing how the uniform and/or multi-modal data was due to grouping in samples by brand. Therefore, while nutrient composition within brands may follow normal distributions (this would require further investigation), our overall composite data does not.*
+*While log transformations did not help create normality for the majority of the nutrients (as histograms and normal quantile plots showed non-normality even after transformations), we found that log transformations helped create normal data for Fat, Sodium, and Calories (we chose log transformations as both of these nutrients were skewed right in the boxplot due to large "outliers"). Therefore, we created a new dataset with those transformed variables.*
+
+```{r}
+# Chi-Squared Quantile Plot
+# CSQPlot(pizza2[,c(3:9)], label = "Pizza Data")
+CSQPlot(pizzatrans[,c(3:9)], label = "Transformed Pizza Data")
+```
+*Based on our chi-square quantile plot, our data does not appear to have a multivariate normal distribution. This conclusion is because the majority of the data falls outside of the 95% confidence limits for what a multivariate normal distribution should be (this is especially clear at the right tail). While multivariate normality is not a requirement for PCA to work, it is a requirement/assumption of Parallel Analysis.*
+
+### Question 2
+
+```{r}
+suppressWarnings(corrplot.mixed(cor(pizzatrans[,c(3:9)]), lower.col = "black", upper = "ellipse", tl.col = "black", number.cex = .7, order = "hclust", tl.pos = "lt", tl.cex = .7))
+
+chart.Correlation(pizzatrans[,c(3:9)], histogram = TRUE, pch = 19)
+```
+
+*From the correlation plots it appears that Protein & Ash, Log Fat & Ash, Log Sodium & Ash, and Log Sodium & Log Fat have relatively strong, positive relationships. Moisture & Log Calories, Protein & Carbohydrates, and Ash & Carbohydrates appear to have relatively strong, negative relationships. In general, Moisture, Protein, and Log Calories have less strong relationships with other nutrients. However, because the majority of relationships displayed are strong, we think that PCA will help to narrow down the number of components/variables. It must be noted though that because of clustering in our data based on Brand, the correlation matrix plot is useless in helping us determine linearity of relationships.*
+
+### Question 3
+
+```{r}
+pizza_standardized <- pizzatrans[, c(3:9)]
+pizza2_standardized <- scale(pizza_standardized)
+(cor_matrix <- cor(pizza2_standardized))
+
+pc1 <- princomp(pizza2_standardized, cor = TRUE)
+names(pc1)
+
+#Here are standard deviations
+summary(pc1)
+
+#Get eigenvalues/variance
+round(pc1$sdev^2,2)
+
+#make a screeplot  
+screeplot(pc1, type = "lines", col = "red", lwd = 2, pch = 19, cex = 1.2, 
+          main = "Scree Plot of Raw Pizza Data")
+
+#perform parallel analysis
+source("http://www.reuningscherer.net/multivariate/R/parallel.r.txt")
+parallelplot(pc1)
+```
+*Method 1) Total Variance Explained: Component One accounts for 58.7% of total variance, while Component One and Two combined account for 90.29% of total variance. The second combination results in a total variance above an 80% threshold, and therefore this method would recommend 2 components.*
+*Method 2) The 'Eigenvalue> 1' criteria: Components One and Two are the only components with eigenvalues greater than 1, and therefore this method would recommend 2 components.*
+*Method 3) The 'scree plot elbow' method: There appears to be a sharp turn/"elbow" at component 3, and therefore this method would recommend 2 components.*
+*Method 4) Parallel Analysis: Only the first two joints are above the Longman and Allen Method, and therefore this method would recommend 2 components. HOWEVER, it should be noted that this method is not appropriate because our data does not follow a multivariate normal distribution.*
+*All three appropriate methods recommend retaining 2 principle components.*
+
+
+### Question 4
+```{r}
+#Get loadings
+print(pc1$loadings, cutoff = 0, digits = 2)
+```
+*We have chosen to retain Components One and Two. Component One has more weight on protein, log fat, ash, and sodium (all positive) and carbohydrates (negative). Meanwhile, Component Two has more weight on moisture (positive) and calories (negative). ___________________ think about an interpretation for each retained component if possible.*
+
+
+### Question 5
+
+```{r}
+#  c(1,2) specifies to use components 1 and 2
+#get function from online
+source("http://reuningscherer.net/multivariate/r/ciscoreplot.R.txt")
+
+#run the function
+ciscoreplot(pc1, c(1, 2), pizzatrans[, 1])
+
+#make a biplot for first two components
+biplot(pc1, choices = c(1, 2), pc.biplot = T)
+```
+*_____________Discuss any trends/groupings you observe (probably, this will be ‘none’). *
+
+
+### Question 6
+

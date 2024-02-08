@@ -16,7 +16,7 @@ library(corrplot)
 library(PerformanceAnalytics)
 library(heplots)
 
-pizza <- read.csv("/Users/jennifercenta/Downloads/363/Pizza.csv")
+pizza <- read.csv("Pizza.csv")
 pizza2 <- pizza[ ,c("brand", "id", "mois", "prot", "fat", "ash", "sodium", "carb", "cal")]
 pizza2 <- pizza2[complete.cases(pizza2), ]
 pizza2

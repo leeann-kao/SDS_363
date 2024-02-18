@@ -29,6 +29,7 @@ data <- read.csv("data.csv")
 data <- subset(data, year == 2004)
 
 data <- subset(data, regime %in% c(2, 3, 4))
+table(data$regime)
 ```
 
 
@@ -66,16 +67,27 @@ plot(data[,6:10], col = data[,12]+2, pch = data[,12] + 15, cex = 1.2)
 #Linear Discriminant Analysis with equal priors
 (data.disc <- lda(data[, 6:10], grouping = data$regime, priors = c(.333, .333, .333)))
 
-#Looking at Different Coefficients
-print("Raw (Unstandardized) Coefficients")
-round(data.disc$scaling, 2)
+#Step-Wise
+step1 <- stepclass(regime ~ educm + logexp + fdi + logimp + loggdpc, data = data, method = "lda", direction = "both", priors = c(.333, .333, .333), fold = nrow(data))
+```
+*Linear Discriminant Analysis seems like the best model because the Box's M-Test indicated similar covariance across the groups. Performing step-wise dicriminant analysis indicated the sole variable loggdpc can predict group, but the classification accuracy is 0.49, lower than the regular non cross-validadated linear discriminant analysis. *
 
-print("Normalized Coefficients")
-round(data.disc$scaling / sqrt(sum(data.disc$scaling^2)), 2)
 
-print("Standardized Coefficients")
-round(lda(scale(data[, 6:10]), grouping = data$regime, priors = c(1/3, 1/3, 1/3))$scaling, 2)
+### Question 3
+```{r}
+data.manova <- manova(as.matrix(data[, 6:10]) ~ data$regime)
+summary.manova(data.manova, test = "Wilks")
+```
+*The p-value on our Wilk's Lambda is 0.01961 < alpha at 0.05, so we reject the null hypothesis that the multivariate means are the same. In other words, that is statistical evidence that the multivariate group means are different among regimes.*
 
+
+### Question 4
+
+*We have 2 significant discriminate functions (3 regime types - 1 = 2, which is the minimum compared to our number of variables). Because the eigenvectors are ordered according to discriminating ability, the first function has the greatest relative discriminating power. This can also be seen by the proportion of trace, where our first function has a score of 0.8621 compared to 0.1379 for the second function. These scores are the between-class variance that is explained by the discriminant functions or in other words, their relative discriminating power.*
+
+
+### Question 5
+```{r}
 #Classification Results
 (ctraw <- table(data$regime, predict(data.disc)$class))
 round(sum(diag(prop.table(ctraw))), 2)
@@ -83,9 +95,13 @@ round(sum(diag(prop.table(ctraw))), 2)
 data.discCV <- lda(data[,6:10], grouping = data$regime, CV = TRUE)
 (ctCV <- table(data$regime, data.discCV$class))
 round(sum(diag(prop.table(ctCV))), 2)
-
-#Step-Wise
-step1 <- stepclass(regime ~ educm + logexp + fdi + logimp + loggdpc, data = data, method = "lda", direction = "both", fold = nrow(data))
 ```
+*Upon performing the linear discriminant analysis we can see the classification accuracy is 0.54 for non cross-validated data and 0.46 for cross-validated data. Given there are three groups with relatively equal frequency, 0.54 is not a terrible classification rate for discriminating ability. There is evidence for over-fitting in this case because as soon as we cross-validate our results, our overall percentage correct drops by 8%.*
 
-*Linear Discriminant Analysis seems like the best model because the Box's M-Test indicated similar covariance across the groups. Upon performing the linear discriminant analysis we can see the classification accuracy is 0.54 for non cross-validated data and 0.46 for cross-validated data. Given there are three groups with relatively equal frequency, 0.54 is not a terrible classification rate. Furthermore, performing step-wise dicriminant analysis, indicates the sole variable loggdpc can predict group, but the classification accuracy is 0.49, lower than the regular non cross-validadated linear discriminant analysis.*
+
+### Question 6
+```{r}
+print("Standardized Coefficients")
+round(lda(scale(data[, 6:10]), grouping = data$regime, priors = c(1/3, 1/3, 1/3))$scaling, 2)
+```
+*All of the standardized coefficients have relatively similar magnitudes (around 0.70), suggesting relatively equal importance of variables. However, I would exclude fdi from the list, as its coefficients are smaller in magnitude than the rest (around 0.30). Therefore, I would consider education, log exports, log imports, and log GDP to be the "best" discriminators among groups. However, it should be noted that log exports varies significantly in its coefficient magnitude between functions. This is likely because log exports and log imports are highly correlated (based on the matrix plots), and are therefore competing to discriminate between groups. The correlation between variables means that caution must be taken when making inferences about relative discriminating power.*

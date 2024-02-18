@@ -1,0 +1,91 @@
+---
+title: "Homework 2"
+author: "Vinny Sriram, Lee-Ann Kao, Jennifer Centa"
+date: "2024-02-03"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**We are working with the Pizza Data Set. The group members are Vinny Sriram, Lee-Ann Kao, and Jennifer Centa. Our emails are vinny.sriram@yale.edu, lee-ann.kao@yale.edu, and jennifer.centa@yale.edu.**
+
+```{r, echo=FALSE}
+library(MASS)
+library(biotools)
+library(klaR)
+library(car)
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+library(ggExtra)
+library(heplots)
+```
+
+# Set-Up
+```{r}
+data <- read.csv("data.csv")
+data <- subset(data, year == 2004)
+
+data <- subset(data, regime %in% c(2, 3, 4))
+```
+
+
+### Question 1
+
+```{r}
+# Check multivariate normality within each group
+source("http://www.reuningscherer.net/multivariate/R/CSQPlot.r.txt")
+par(pty = "s", cex = 0.8, cex.main = 0.8)
+CSQPlot(data[data$regime == 2, c(6:10)], label = "Presidential Democracy")
+CSQPlot(data[data$regime == 3, c(6:10)], label = "Civilian Dictatorship")
+CSQPlot(data[data$regime == 4, c(6:10)], label = "Military Dictatorship")
+
+# Covariance Compairson
+boxM(data[,c(6:10)], data$regime)
+
+#Matrix Plots
+plot(data[,6:10], col = data[,12]+2, pch = data[,12] + 15, cex = 1.2)
+
+data <- data[data$country != "Chad", ]
+data <- data[data$country != "Singapore", ]
+
+# Covariance Compairson
+boxM(data[,c(6:10)], data$regime)
+
+#Matrix Plots
+plot(data[,6:10], col = data[,12]+2, pch = data[,12] + 15, cex = 1.2)
+```
+
+*Based on the Chi-Square Quantile Plots, each group has multivariate normal data because all the data points remain within the 95% confidence bounds. However, there is not similar covariance across groups given the p-value from the Box's M test of 1.879e-09, forcing us to reject the null-hypothesis of homogeneous covariance Looking at the matrix plots to look at the two variable relationships, for the most part the correlations across two variables seem similar across the three groups. However, there is an extreme outlier for fdi (Chad), and a significant outlier in both log imports and log GDP per capita (Singapore). It seems reasonable to remove Chad, especially when considering an outlying event (failed coup) that may have caused this extreme fdi in this year. Furthermore, we can justify removing Singapore as in 2004 it fits outside of the developing-post colonial group that all other countries belong to. Once removing these two entries, we can see that the covariance across groups has gotten closer, the Box's M-test p-value now being 0.0015 > 0.001, so we can fail to reject the null hypotehsis and move forward with linear DA. Since the Box's M-test is very sensitive in larger samples, we can use a lower alpha of 0.001.*
+
+### Question 2
+
+```{r}
+#Linear Discriminant Analysis with equal priors
+(data.disc <- lda(data[, 6:10], grouping = data$regime, priors = c(.333, .333, .333)))
+
+#Looking at Different Coefficients
+print("Raw (Unstandardized) Coefficients")
+round(data.disc$scaling, 2)
+
+print("Normalized Coefficients")
+round(data.disc$scaling / sqrt(sum(data.disc$scaling^2)), 2)
+
+print("Standardized Coefficients")
+round(lda(scale(data[, 6:10]), grouping = data$regime, priors = c(1/3, 1/3, 1/3))$scaling, 2)
+
+#Classification Results
+(ctraw <- table(data$regime, predict(data.disc)$class))
+round(sum(diag(prop.table(ctraw))), 2)
+
+data.discCV <- lda(data[,6:10], grouping = data$regime, CV = TRUE)
+(ctCV <- table(data$regime, data.discCV$class))
+round(sum(diag(prop.table(ctCV))), 2)
+
+#Step-Wise
+step1 <- stepclass(regime ~ educm + logexp + fdi + logimp + loggdpc, data = data, method = "lda", direction = "both", fold = nrow(data))
+```
+
+*Linear Discriminant Analysis seems like the best model because the Box's M-Test indicated similar covariance across the groups. Upon performing the linear discriminant analysis we can see the classification accuracy is 0.54 for non cross-validated data and 0.46 for cross-validated data. Given there are three groups with relatively equal frequency, 0.54 is not a terrible classification rate. Furthermore, performing step-wise dicriminant analysis, indicates the sole variable loggdpc can predict group, but the classification accuracy is 0.49, lower than the regular non cross-validadated linear discriminant analysis.*

@@ -1,7 +1,7 @@
 ---
-title: "Homework 2"
+title: "Homework 3"
 author: "Vinny Sriram, Lee-Ann Kao, Jennifer Centa"
-date: "2024-02-03"
+date: "2024-02-18"
 output: word_document
 ---
 
@@ -9,7 +9,7 @@ output: word_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-**We are working with the Pizza Data Set. The group members are Vinny Sriram, Lee-Ann Kao, and Jennifer Centa. Our emails are vinny.sriram@yale.edu, lee-ann.kao@yale.edu, and jennifer.centa@yale.edu.**
+**We are working with our dataset on Democracy & EU Aid data on previously colonized countries. The group members are Vinny Sriram, Lee-Ann Kao, and Jennifer Centa. Our emails are vinny.sriram@yale.edu, lee-ann.kao@yale.edu, and jennifer.centa@yale.edu.**
 
 ```{r, echo=FALSE}
 library(MASS)

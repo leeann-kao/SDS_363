@@ -21,6 +21,7 @@ library(lubridate)
 library(ggplot2)
 library(ggExtra)
 library(heplots)
+library(ks)
 ```
 
 # Set-Up
@@ -59,7 +60,7 @@ boxM(data[,c(6:10)], data$regime)
 plot(data[,6:10], col = data[,12]+2, pch = data[,12] + 15, cex = 1.2)
 ```
 
-*Based on the Chi-Square Quantile Plots, each group has multivariate normal data because all the data points remain within the 95% confidence bounds. However, there is not similar covariance across groups given the p-value from the Box's M test of 1.879e-09, forcing us to reject the null-hypothesis of homogeneous covariance Looking at the matrix plots to look at the two variable relationships, for the most part the correlations across two variables seem similar across the three groups. However, there is an extreme outlier for fdi (Chad), and a significant outlier in both log imports and log GDP per capita (Singapore). It seems reasonable to remove Chad, especially when considering an outlying event (failed coup) that may have caused this extreme fdi in this year. Furthermore, we can justify removing Singapore as in 2004 it fits outside of the developing-post colonial group that all other countries belong to. Once removing these two entries, we can see that the covariance across groups has gotten closer, the Box's M-test p-value now being 0.0015 > 0.001, so we can fail to reject the null hypotehsis and move forward with linear DA. Since the Box's M-test is very sensitive in larger samples, we can use a lower alpha of 0.001.*
+*Based on the Chi-Square Quantile Plots, each group has multivariate normal data because all the data points remain within the 95% confidence bounds. However, there is not similar covariance across groups given the p-value from the Box's M test of 1.879e-09, forcing us to reject the null-hypothesis of homogeneous covariance Looking at the matrix plots to look at the two variable relationships, for the most part the correlations across two variables seem similar across the three groups. However, there is an extreme outlier for fdi (Chad), and a significant outlier in both log imports and log GDP per capita (Singapore). It seems reasonable to remove Chad, especially when considering an outlying event (failed coup) that may have caused this extreme fdi in this year. Furthermore, we can justify removing Singapore as in 2004 it fits outside of the developing-post colonial group that all other countries belong to. Once removing these two entries, we can see that the covariance across groups has gotten closer, the Box's M-test p-value now being 0.0015 > 0.001, so we can fail to reject the null hypothesis and move forward with linear DA. Since the Box's M-test is very sensitive in larger samples, we can use a lower alpha of 0.001.*
 
 ### Question 2
 
@@ -105,3 +106,50 @@ print("Standardized Coefficients")
 round(lda(scale(data[, 6:10]), grouping = data$regime, priors = c(1/3, 1/3, 1/3))$scaling, 2)
 ```
 *All of the standardized coefficients have relatively similar magnitudes (around 0.70), suggesting relatively equal importance of variables. However, I would exclude fdi from the list, as its coefficients are smaller in magnitude than the rest (around 0.30). Therefore, I would consider education, log exports, log imports, and log GDP to be the "best" discriminators among groups. However, it should be noted that log exports varies significantly in its coefficient magnitude between functions. This is likely because log exports and log imports are highly correlated (based on the matrix plots), and are therefore competing to discriminate between groups. The correlation between variables means that caution must be taken when making inferences about relative discriminating power.*
+
+
+### Question 7
+
+*Make score plots for the first two or three DA function scores (be sure to use different symbols/colors for each group). Comment on what you see.*
+
+```{r}
+#Score plots
+datalda <- lda(scale(data[, 6:10]), grouping = data$regime)
+names(datalda)
+summary(datalda)
+
+
+scores <- as.matrix(scale(data[, 6:10]))%*%matrix(datalda$scaling, ncol = 2)
+
+plot(scores[,1], scores[,2], type = "n", main = "Linear DCA scores for Democracy & EU Aid data", xlab = "DCA Axis 1", ylab = "DCA Axis 2")
+
+datanames <- names(table(data[, 12]))
+
+for (i in 1:3){
+  points(scores[data$regime == datanames[i], 1],
+         scores[data$regime == datanames[i], 2], col = i+1, pch = 15+i, cex = 1.1)
+}
+
+legend("topright", legend = c("Presidential Democracy", "Civilian Dictatorship", "Military Dictatorship"), col = c(2:4), pch = c(16, 17, 18), cex = 0.7)
+```
+
+*There is substantial overlap between regime types, which suggests that discrimination based on the selected variables is challenging, and these variables might not be strong indicators of the regime type. The concentration of civilian and military dictatorship on the right 2/3 suggests that these regime types might share similarities in terms of the selected variables. This could be due to common characteristics or behaviors among dictatorships.*
+
+### Question 8
+
+```{r}
+partimat(as.factor(data$regime) ~ data$educm + data$logexp + data$fdi + data$logimp + data$loggdpc, method = "lda")
+```
+
+
+### Question 9
+
+```{r}
+#original plot without smoothing
+plot(data$educm, data$fdi)
+
+#kernel smoothing
+valuesks <- ksmooth(data[,"educm"], data[,"fdi"], bandwidth = 0.5, kernel = "normal")
+
+plot(valuesks$x, valuesks$y)
+```

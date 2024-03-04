@@ -1,0 +1,86 @@
+---
+title: "Homework 4"
+author: "Vinny Sriram, Lee-Ann Kao, Jennifer Centa"
+date: "2024-03-04"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**We are working with the a Data Set that tracks the democraticness, economic conditions, and foreign aid, of post colonial countries across time. The group members are Vinny Sriram, Lee-Ann Kao, and Jennifer Centa. Our emails are vinny.sriram@yale.edu, lee-ann.kao@yale.edu, and jennifer.centa@yale.edu.**
+
+```{r}
+library(MASS)
+library(biotools)
+library(klaR)
+library(car)
+```
+
+### Set-Up
+```{r}
+data <- read.csv("data.csv")
+table(data$dd, data$region)
+data <- subset(data, region %in% c("East Asia and Pacific", "Latin America and Caribbean", "South Asia", "Sub-Saharan Africa"))
+data$dd <- as.factor(data$dd)
+data$region <- as.factor(data$region)
+```
+
+### Question 1
+```{r}
+# Interaction plot for Log Exports
+interaction.plot(data$dd, data$region, data$logexp,
+                 lwd = 3, col = c("red", "blue", "green", "black"),
+                 trace.label = "Region", xlab = "Regime", ylab = "Log Exports",
+                 main = "Interaction Plot for Log Exports")
+
+# Interaction plot for Foreign Direct Investment
+interaction.plot(data$dd, data$region, data$fdi,
+                 lwd = 3, col = c("red", "blue", "green", "black"),
+                 trace.label = "Region", xlab = "Regime", ylab = "FDI",
+                 main = "Interaction Plot for Foreign Direct Investment")
+
+# Interaction plot for Log Imports
+interaction.plot(data$dd, data$region, data$logimp,
+                 lwd = 3, col = c("red", "blue", "green", "black"),
+                 trace.label = "Region", xlab = "Regime", ylab = "Log Imports",
+                 main = "Interaction Plot for Log Imports")
+
+# Interaction plot for Log GDP per Capita
+interaction.plot(data$dd, data$region, data$loggdpc,
+                 lwd = 3, col = c("red", "blue", "green", "black"),
+                 trace.label = "Region", xlab = "Regime", ylab = "Log GDP per Capita",
+                 main = "Interaction Plot for Log GDP per Capita")
+
+
+```
+
+
+### Question 2
+```{r}
+options(contrasts = c("contr.sum", "contr.poly"))
+
+MAOV <- lm(cbind(logexp, fdi, logimp, loggdpc) ~ dd * region, data = data)
+
+# Multivariate and univariate results
+summary(Anova(MAOV, type = 3), univariate = T)
+```
+
+### Question 3
+```{r}
+options(contrasts = c("contr.treatment", "contr.poly"))
+
+levels(data$dd)
+MAOV2<- lm(cbind(logexp, fdi, logimp, loggdpc) ~ dd, data = data)
+linearHypothesis(MAOV2, "-ddDictatorship = 0")
+
+logexpANOVA <- lm(logexp ~ dd, data = data)
+linearHypothesis(logexpANOVA, "-ddDictatorship = 0")
+
+logimpANOVA <- lm(logimp ~ dd, data = data)
+linearHypothesis(logimpANOVA, "-ddDictatorship = 0")
+
+
+```
+

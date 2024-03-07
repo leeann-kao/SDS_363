@@ -175,3 +175,8 @@ CSQPlot(Mod2$residuals, label = "Residuals from Data")
 
 ```
 
+### Question 6
+```{r}
+library(vegan)
+(mrpp1 <- mrpp(data[,c("EUaid", "CIRI", "educm", "logexp", "fdi", "logimp", "loggdpc", "demregion")], as.factor(data$country)))
+```

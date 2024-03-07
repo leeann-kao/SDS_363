@@ -16,6 +16,7 @@ library(MASS)
 library(biotools)
 library(klaR)
 library(car)
+library(ggplot)
 ```
 
 ### Set-Up
@@ -82,5 +83,55 @@ logimpANOVA <- lm(logimp ~ dd, data = data)
 linearHypothesis(logimpANOVA, "-ddDictatorship = 0")
 
 
+```
+
+### Question 4
+```{r}
+
+# Create scatter plots for each covariate-response pair
+plot1 <- ggplot(data, aes(x = EUaid, y = logexp)) +
+  geom_point() +
+  geom_smooth(method = "lm") +  
+  ggtitle("EUaid vs logexp")
+
+plot2 <- ggplot(data, aes(x = EUaid, y = fdi)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  ggtitle("EUaid vs fdi")
+
+plot3 <- ggplot(data, aes(x = EUaid, y = logimp)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  ggtitle("EUaid vs logimp")
+
+plot4 <- ggplot(data, aes(x = EUaid, y = loggdpc)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  ggtitle("EUaid vs loggdpc")
+
+library(gridExtra)
+grid.arrange(plot1, plot2, plot3, plot4, ncol = 2)
+
+options(contrasts = c("contr.sum", "contr.poly"))
+
+#Fit the model
+MAOVMod2 <- lm(cbind(logexp, fdi, logimp, loggdpc) ~ dd * region +  EUaid, data = data)
+
+#Multivariate results and univariate results with with type 3 Sum of squares
+summary(Anova(MAOVMod2, type = 3), univariate = T)
+
+mod1 <- lm(logexp ~ region + dd + region*dd + EUaid, data = data)
+mod2 <- lm(fdi ~ region + dd + region*dd + EUaid, data = data)
+mod3 <- lm(logimp ~ region + dd + region*dd + EUaid, data = data)
+mod4 <- lm(loggdpc ~ region + dd + region*dd + EUaid, data = data)
+
+#Type I Sum of Squares
+summary.aov(mod1)
+summary.aov(mod2)
+summary.aov(mod3)
+summary.aov(mod4)
+
+#Check residuals
+CSQPlot(MAOVMod2$residuals, label = "Residuals from GLM")
 ```
 

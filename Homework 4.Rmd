@@ -135,3 +135,43 @@ summary.aov(mod4)
 CSQPlot(MAOVMod2$residuals, label = "Residuals from GLM")
 ```
 
+### Question 5
+```{r}
+#Check model assumptions by making a chi-square quantile plot of the residuals.
+# Modify your model as appropriate based on your findings.
+
+#Check residuals
+CSQPlot(MAOVMod2$residuals, label = "Residuals from GLM")
+
+modexp <- lm(logexp ~ dd * region +  EUaid, data = data)
+plot(modexp, which = c(1,2), pch = 19, col = 'red')
+
+modfdi <- lm(fdi ~ dd * region +  EUaid, data = data)
+plot(modfdi, which = c(1,2), pch = 19, col = 'orange')
+
+modlogimp <- lm(logimp ~ dd * region +  EUaid, data = data)
+plot(modlogimp, which = c(1,2), pch = 19, col = 'yellow')
+
+modloggdpc <- lm(loggdpc ~ dd * region +  EUaid, data = data)
+plot(modloggdpc, which = c(1,2), pch = 19, col = 'blue')
+
+data$newfdi <- data$fdi - min(data$fdi, na.rm = T)*1.01
+modfdi2 <- lm(newfdi ~ dd * region +  EUaid, data = data)
+BC <- boxcox(modfdi2, optimize = T)
+(lambda <- BC$x[which.max(BC$y)])
+
+data$newfdi <- (data$fdi - min(data$fdi, na.rm = T)*1.01)^0.3
+
+modmin2 <- lm(newfdi ~ dd * region +  EUaid, data = data)
+plot(modmin2, which = c(1, 2), col = 'blue', pch = 19)
+
+#Fit the model
+Mod2 <- lm(cbind(logexp, newfdi, logimp, loggdpc) ~ dd * region +  EUaid, data = data)
+
+#Multivariate and univariate results with type 3 Sum of squares
+summary(Anova(Mod2, type = 3), univariate = T)
+
+CSQPlot(Mod2$residuals, label = "Residuals from Data")
+
+```
+

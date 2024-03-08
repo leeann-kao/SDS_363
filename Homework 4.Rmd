@@ -16,14 +16,16 @@ library(MASS)
 library(biotools)
 library(klaR)
 library(car)
-library(ggplot)
+library(ggplot2)
 ```
 
 ### Set-Up
 ```{r}
 data <- read.csv("data.csv")
 table(data$dd, data$region)
-data <- subset(data, region %in% c("East Asia and Pacific", "Latin America and Caribbean", "South Asia", "Sub-Saharan Africa"))
+data <- subset(data, region %in% c("East Asia and Pacific", 
+                                   "Latin America and Caribbean", "South Asia", 
+                                   "Sub-Saharan Africa"))
 data$dd <- as.factor(data$dd)
 data$region <- as.factor(data$region)
 ```
@@ -51,11 +53,11 @@ interaction.plot(data$dd, data$region, data$logimp,
 # Interaction plot for Log GDP per Capita
 interaction.plot(data$dd, data$region, data$loggdpc,
                  lwd = 3, col = c("red", "blue", "green", "black"),
-                 trace.label = "Region", xlab = "Regime", ylab = "Log GDP per Capita",
+                 trace.label = "Region", xlab = "Regime", 
+                 ylab = "Log GDP per Capita",
                  main = "Interaction Plot for Log GDP per Capita")
-
-
 ```
+*There appear to be mild interactions based on our interaction plots, with mostly parallel lines except for a cross between East Asia and Pacific versus Latin America and the Caribbean with respect to FDI, a cross between Latin America and Caribbean and Sub-Saharan Africa in Log Imports, and a cross between Sub-Saharan Africa and Latin America and Carribian in Log Exports. *
 
 
 ### Question 2
@@ -67,6 +69,7 @@ MAOV <- lm(cbind(logexp, fdi, logimp, loggdpc) ~ dd * region, data = data)
 # Multivariate and univariate results
 summary(Anova(MAOV, type = 3), univariate = T)
 ```
+*The p-values for all of the multivariate method tests on Democracy-Dictarship score, region, and the interaction between DD scores and region are less than alpha at 0.05, meaning we reject the null hypothesis that there is no difference in our response variables between regional groups and between democracies and dictatorships. For the univariate results, we appear to have statistically significant results for region and the interaction between region and DD score on log exports, significant results for dd and region on FDI score, and statistically significant results for region and the interaction between region and DD score on log GDP.*
 
 ### Question 3
 ```{r}
@@ -81,13 +84,11 @@ linearHypothesis(logexpANOVA, "-ddDictatorship = 0")
 
 logimpANOVA <- lm(logimp ~ dd, data = data)
 linearHypothesis(logimpANOVA, "-ddDictatorship = 0")
-
-
 ```
+*The p-values for all of the multivariate method tests are less than alpha at 0.05, meaning we reject the null hypothesis that there is no difference in our response variables between democracies and dictatorships. In our univariate tests, we see that our p-value for log exports is 0.5236 > alpha at 0.05, so we fail to reject the null hypothesis that there is no difference in log exports between democracies and dictatorships. For log imports, our p-value is less than alpha at 0.05, so we reject the null hypothesis that there is no difference in log imports between democracies and dictatorships.*
 
 ### Question 4
 ```{r}
-
 # Create scatter plots for each covariate-response pair
 plot1 <- ggplot(data, aes(x = EUaid, y = logexp)) +
   geom_point() +
@@ -115,7 +116,8 @@ grid.arrange(plot1, plot2, plot3, plot4, ncol = 2)
 options(contrasts = c("contr.sum", "contr.poly"))
 
 #Fit the model
-MAOVMod2 <- lm(cbind(logexp, fdi, logimp, loggdpc) ~ dd * region +  EUaid, data = data)
+MAOVMod2 <- lm(cbind(logexp, fdi, logimp, loggdpc) ~ dd * region +  
+                 EUaid, data = data)
 
 #Multivariate results and univariate results with with type 3 Sum of squares
 summary(Anova(MAOVMod2, type = 3), univariate = T)
@@ -130,16 +132,11 @@ summary.aov(mod1)
 summary.aov(mod2)
 summary.aov(mod3)
 summary.aov(mod4)
-
-#Check residuals
-CSQPlot(MAOVMod2$residuals, label = "Residuals from GLM")
 ```
+*Based on our plots, there appear to be linear relationships between EU aid and all of our response variables. The p-values for all of the multivariate method tests on Democracy-Dictarship score, region, EU aid, and the interaction between DD scores and region are less than alpha at 0.05, meaning we reject the null hypothesis that there is no difference in our response variables between these groups.For the univariate results, we appear to have statistically significant results for region and EU aid on log exports, significant results for all variables except the interaction on FDI score, and statistically significant results for region, EU aid, and the interaction between region and DD score on both log imports and log GDP.*
 
 ### Question 5
 ```{r}
-#Check model assumptions by making a chi-square quantile plot of the residuals.
-# Modify your model as appropriate based on your findings.
-
 #Check residuals
 CSQPlot(MAOVMod2$residuals, label = "Residuals from GLM")
 
@@ -155,6 +152,7 @@ plot(modlogimp, which = c(1,2), pch = 19, col = 'yellow')
 modloggdpc <- lm(loggdpc ~ dd * region +  EUaid, data = data)
 plot(modloggdpc, which = c(1,2), pch = 19, col = 'blue')
 
+# Use Box-Cox transformation for heavy-tailed FDI
 data$newfdi <- data$fdi - min(data$fdi, na.rm = T)*1.01
 modfdi2 <- lm(newfdi ~ dd * region +  EUaid, data = data)
 BC <- boxcox(modfdi2, optimize = T)
@@ -162,21 +160,24 @@ BC <- boxcox(modfdi2, optimize = T)
 
 data$newfdi <- (data$fdi - min(data$fdi, na.rm = T)*1.01)^0.3
 
-modmin2 <- lm(newfdi ~ dd * region +  EUaid, data = data)
-plot(modmin2, which = c(1, 2), col = 'blue', pch = 19)
+modfdi2 <- lm(newfdi ~ dd * region +  EUaid, data = data)
+plot(modfdi2, which = c(1, 2), col = 'blue', pch = 19)
 
 #Fit the model
-Mod2 <- lm(cbind(logexp, newfdi, logimp, loggdpc) ~ dd * region +  EUaid, data = data)
+Mod2 <- lm(cbind(logexp, newfdi, logimp, loggdpc) ~ dd * region +  
+             EUaid, data = data)
 
 #Multivariate and univariate results with type 3 Sum of squares
 summary(Anova(Mod2, type = 3), univariate = T)
 
-CSQPlot(Mod2$residuals, label = "Residuals from Data")
-
+CSQPlot(Mod2$residuals, label = "Residuals from Data, modified FDI")
 ```
+*Attempted to modify the heavy-skewed FDI data by using a box-cox transformation, which very slightly improved the QQ plot as well as the Chi-Square Quantiles Plot for Residuals from GLM, but ultimately more transformations are needed as it is still not multivariate normal.*
+
 
 ### Question 6
 ```{r}
 library(vegan)
-(mrpp1 <- mrpp(data[,c("EUaid", "CIRI", "educm", "logexp", "fdi", "logimp", "loggdpc", "demregion")], as.factor(data$country)))
+(mrpp1 <- mrpp(data[,c("EUaid", "CIRI", "educm", "logexp", "fdi", "logimp", 
+                       "loggdpc", "demregion")], as.factor(data$country)))
 ```

@@ -1,0 +1,92 @@
+---
+title: "Homework 5"
+author: "Vinny Sriram, Lee-Ann Kao, Jennifer Centa"
+date: "2024-03-31"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**We are working with the a Data Set that tracks the democraticness, economic conditions, and foreign aid, of post colonial countries across time. The group members are Vinny Sriram, Lee-Ann Kao, and Jennifer Centa. Our emails are vinny.sriram@yale.edu, lee-ann.kao@yale.edu, and jennifer.centa@yale.edu.**
+
+```{r}
+par(ask=FALSE)
+#load relevant libraries
+library(aplpack)
+library(fpc)
+library(cluster)
+library(ape)
+library(amap)
+library(dplyr)
+```
+
+### Set-Up
+```{r}
+data <- read.csv("data.csv")
+data <- subset(data, year == 2004)
+data <- data[!duplicated(data[c('country')]), ]
+```
+
+
+### Question 1: Distance metrics
+
+*We are going to perform cluster analysis looking at 83 countries based on the characteristics of education, log exports, FDI score, log imports, and log GDP in 2004 (83 objects and 5 variables). All of these are continuous variables, and we are clustering based on our cases/objects. Because of this, distance metrics such as Euclidean distance and Manhattan distance (examples of Minkowski distance), as well as maximum distance, Squared Euclidean distance, and Sorenson distance, are most appropriate for our data.*
+
+*However, all of these measures are scale variant, meaning that we want to subtract the sample means and divide by the sample standard deviation to avoid some variables having more influence than others (or use Relative Euclidean distance). For out data there is no case in which we want more inherent variability to have more of an influence on the overall calculation of distance, and therefore we chose to standardize our data.*
+
+```{r}
+#standardize
+datanorm <- data[, c("educm","logexp", "fdi", "logimp", "loggdpc")]
+rownames(datanorm) <- data[, 1]
+datanorm <- scale(na.omit(datanorm))
+dim(datanorm)
+head(datanorm)
+```
+
+
+
+### Question 2: Hierarchical cluster analysis
+
+```{r}
+#Techniques A: Euclidean distance + complete linkage
+
+#distance matrix using Euclidean distance
+dist1 <- dist(datanorm, method = "euclidean")
+
+#clustering using complete linkage
+clust1 <- hclust(dist1, method = "complete")
+
+#dendrogram
+plot(clust1, labels = rownames(datanorm), cex = 0.4, xlab = "", ylab = "Distance (Euclidean)", main = "Clustering of Countries (Complete Linkage)")
+
+
+
+#Techniques B: Manhattan distance + Ward's method
+
+#distance matrix using Manhattan distance
+dist2 <- dist(datanorm, method = "manhattan")
+
+#clustering using Ward's method
+clust2 <- hclust(dist2, method = "ward.D")
+
+#dendrogram
+plot(clust2, labels = rownames(datanorm), cex = 0.4, xlab = "", ylab = "Distance (Manhattan)", main = "Clustering of Countries (Ward's Method)")
+
+
+
+#Techniques C: Maximum distance + single linkage
+
+#distance matrix using maximum distance
+dist3 <- dist(datanorm, method = "maximum")
+
+#clustering using single linkage
+clust3 <- hclust(dist3, method = "single")
+
+#dendrogram
+plot(clust3, labels = rownames(datanorm), cex = 0.4, xlab = "", ylab = "Distance (Maximum)", main = "Clustering of Countries (Single Linkage)")
+```
+*With Euclidean distance and Complete linkage we see a "skewed right" tree, meaning that clusters on the right tend to be larger than the cluster to the left of them, and there also appears to be an "outlier" with Chad having its own branch at the top along with the two main clusters. With Manhattan Distance and Ward's Method, the tree is more symmetrical with larger distances between them than before, and Chad is now incorporated into the clusters to create two main clusters. The similar results but increased distance makes sense because Ward's method tends to produce similar results to complete linkage, but as you move up the distances increase quadratically rather than linearly, pushing individuals into discrete groups more rapidly. Single linkage is extremely "skewed right" or asymmetrical, producing not the best cluster results as discussed in lecture.*
+
+

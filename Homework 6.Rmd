@@ -1,0 +1,75 @@
+---
+title: "Homework 6"
+author: "Vinny Sriram, Lee-Ann Kao, Jennifer Centa"
+date: "2024-04-06"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**We are working with the a Data Set that tracks the democraticness, economic conditions, and foreign aid, of post colonial countries across time. The group members are Vinny Sriram, Lee-Ann Kao, and Jennifer Centa. Our emails are vinny.sriram@yale.edu, lee-ann.kao@yale.edu, and jennifer.centa@yale.edu.**
+
+```{r}
+library(vegan)
+library(vegan3d)
+library(mgcv)
+library(MASS)
+library(rgl)
+```
+
+### Set-Up
+```{r}
+#read data
+data <- read.csv("data.csv")
+data <- subset(data, year == 2004)
+data <- data[!duplicated(data[c('country')]), ]
+dim(data)
+
+#two-way frequency table
+region_regime <- table(data$region, data$regime)
+colnames(region_regime) <- c("Parliamentary Democracy","Semi-Presidential Democracy", "Presidential Democracy", "Civilian Dictatorship", "Military Dictatorship", "Royal Dictatorship")
+df <- as.data.frame.matrix(region_regime)
+
+df
+dim(df)
+```
+
+
+### Question 1: Correspondence Analysis
+
+*We are looking at the relationship between geographical region (East Asia and Pacific, Europe and Central Asia, Latin America and Caribbean, Middle East and North Africa, South Asia, and Sub-Saharan Africa) and regime type (Parliamentary Democracy, Semi-Presidential Democracy, Presidential Democracy, Civilian Dictatorship, Military Dictatorship, and Royal Dictatorship) across 83 countries in 2004. We created a two-way frequency table using these two categorical variables, and performed correspondence analysis using the `cca()` function.*
+```{r}
+#Perform correspondence analysis
+rr_cca <- cca(df)
+rr_cca
+```
+
+
+### Question 2: Inertia
+
+*The inertias for our CA directions are (0.5113)^2 = 0.2614 for CA1, (0.2583)^2 = 0.0667 for CA2, (0.1903)^2 = 0.0362 for CA3, (0.0286)^2 = 0.0008 for CA4, and (0.0002)^2 = ~0 for CA5. The sum of these inertias is 0.3651, and therefore our first two CA directions account for around (26.14 + 6.67)/36.51 = 89.87% of the total inertia, or variance in our analysis. This is a fairly high percentage of variance explained by our first two CA directions.*
+```{r}
+#plot results
+plot(rr_cca, type = "n" , xlim = c(-2, 2.5))
+text(rr_cca, dis = "wa", labels = row.names(df))
+points(rr_cca, pch = 21, col = "red", bg = "yellow", cex = 1.2)
+text(rr_cca, "species", col = "blue", cex = 0.8)
+
+#detrended correspondence analysis
+rr_dca <- decorana(df)
+plot(rr_dca, type = "n")
+text(rr_dca, display = c("sites"), labels = row.names(df), cex = 0.86)
+points(rr_dca, pch = 21, col = "red", bg = "yellow", cex = 0.6)
+text(rr_dca, "species", col = "blue", cex = 0.6)
+```
+
+
+### Question 3: Data Snaking
+*There is slight evidence of "data snaking" in higher dimensional space, because as you go along the scale of most democratic to least democratic regime types there is a rise and fall in the frequency of countries based on region. For example, Europe and Central Asia and Latin America and the Caribbean have greater frequency in the middle of the spectrum while Sub-Saharan Africa rises more towards dictatorships, and the Middle East and North Africa rise in frequency the most at the dictatorship end of the spectrum. There is not a linear relationship between region and regime type, but rather complex interactions. I would not expect my data to have a completely continuous "snake-line" relationship in  higher dimensional space, but rather more defined clusters/curves for some regions (such as the Middle East and North Africa) and less so in others.*
+
+
+### Question 4: Correspondence Analysis Conclusions
+
+*From our cca plots we can see that the Middle East and North Africa corresponds with more Royal Dictatorships, Latin America and the Caribbean as well as Europe and Central Asia corresponds with more Presidential Democracies, South Asia, East Asia and the Pacific corresponds with more Parliamentary Democracies and Military Dictatorships, and Sub-Saharan Africa corresponds with more Civilian Dictatorships. We have relatively high intertia/variance explained by our first two axes.*

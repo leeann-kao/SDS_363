@@ -9,7 +9,7 @@ output: word_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-**We are working with the a Data Set that tracks the democraticness, economic conditions, and foreign aid, of post colonial countries across time. The group members are Vinny Sriram, Lee-Ann Kao, and Jennifer Centa. Our emails are vinny.sriram@yale.edu, lee-ann.kao@yale.edu, and jennifer.centa@yale.edu.**
+**We are working with the Wiconsin.Forest.csv loaner dataset, as our own dataset is not appropraite for all the methods of ordination we discussed The group members are Vinny Sriram, Lee-Ann Kao, and Jennifer Centa. Our emails are vinny.sriram@yale.edu, lee-ann.kao@yale.edu, and jennifer.centa@yale.edu. **
 
 ```{r}
 library(vegan)
@@ -22,54 +22,47 @@ library(rgl)
 ### Set-Up
 ```{r}
 #read data
-data <- read.csv("data.csv")
-data <- subset(data, year == 2004)
-data <- data[!duplicated(data[c('country')]), ]
-dim(data)
+forest <- read.csv("http://reuningscherer.net/multivariate/data/Wisconsin.Forest.csv")
 
-#two-way frequency table
-region_regime <- table(data$region, data$regime)
-colnames(region_regime) <- c("Parliamentary Democracy","Semi-Presidential Democracy", "Presidential Democracy", "Civilian Dictatorship", "Military Dictatorship", "Royal Dictatorship")
-df <- as.data.frame.matrix(region_regime)
-
-df
-dim(df)
+rownames(forest) <-forest[,1]
+forestenv <- matrix(forest[,17], ncol = 1)
+rownames(forestenv) <- forest[, 1]
+colnames(forestenv) <- c("Stage")
+forest <- forest[, -c(1, 17)]
+forestenv <- data.frame(forestenv)
 ```
 
 
 ### Question 1: Correspondence Analysis
 
-*We are looking at the relationship between geographical region (East Asia and Pacific, Europe and Central Asia, Latin America and Caribbean, Middle East and North Africa, South Asia, and Sub-Saharan Africa) and regime type (Parliamentary Democracy, Semi-Presidential Democracy, Presidential Democracy, Civilian Dictatorship, Military Dictatorship, and Royal Dictatorship) across 83 countries in 2004. We created a two-way frequency table using these two categorical variables, and performed correspondence analysis using the `cca()` function.*
+*We are performing correspondence analysis using the 'cca()' function, looking at the relationship between plots (ordered from early to late stage) and the relative abundance of 14 species of plants in Wisconsin. We have 9 axes (the minimum of 10 plots and 14 species is 10, minus 1 is 9).*
 ```{r}
 #Perform correspondence analysis
-rr_cca <- cca(df)
-rr_cca
+forest_cca <- cca(forest)
+forest_cca
 ```
 
 
 ### Question 2: Inertia
 
-*The inertias for our CA directions are (0.5113)^2 = 0.2614 for CA1, (0.2583)^2 = 0.0667 for CA2, (0.1903)^2 = 0.0362 for CA3, (0.0286)^2 = 0.0008 for CA4, and (0.0002)^2 = ~0 for CA5. The sum of these inertias is 0.3651, and therefore our first two CA directions account for around (26.14 + 6.67)/36.51 = 89.87% of the total inertia, or variance in our analysis. This is a fairly high percentage of variance explained by our first two CA directions.*
+*Our total Inertia is 0.7215, meaning that our first CA direction accounts for 0.4506/0.7215 = 62.45% of the total inertia, and our first two CA direction account for around (0.4506 + 0.0899)/0.7215 = 74.91% of the total inertia, or variance in our analysis. This is a decent percentage of variance/inertia explained by our first two CA directions.*
 ```{r}
 #plot results
-plot(rr_cca, type = "n" , xlim = c(-2, 2.5))
-text(rr_cca, dis = "wa", labels = row.names(df))
-points(rr_cca, pch = 21, col = "red", bg = "yellow", cex = 1.2)
-text(rr_cca, "species", col = "blue", cex = 0.8)
+plot(forest_cca, type = "n" , xlim = c(-2, 2.5))
+text(forest_cca, dis = "wa", labels = row.names(forest))
+points(forest_cca, pch = 21, col = "red", bg = "yellow", cex = 0.8)
+text(forest_cca, "species", col = "blue", cex = 0.6)
 
 #detrended correspondence analysis
-rr_dca <- decorana(df)
-plot(rr_dca, type = "n")
-text(rr_dca, display = c("sites"), labels = row.names(df), cex = 0.86)
-points(rr_dca, pch = 21, col = "red", bg = "yellow", cex = 0.6)
-text(rr_dca, "species", col = "blue", cex = 0.6)
+forest_dca <- decorana(forest)
+plot(forest_dca, type = "n")
+text(forest_dca, display = c("sites"), labels = row.names(forest), cex = 0.86)
+points(forest_dca, pch = 21, col = "red", bg = "yellow", cex = 0.6)
+text(forest_dca, "species", col = "blue", cex = 0.6)
 ```
 
 
-### Question 3: Data Snaking
-*There is slight evidence of "data snaking" in higher dimensional space, because as you go along the scale of most democratic to least democratic regime types there is a rise and fall in the frequency of countries based on region. For example, Europe and Central Asia and Latin America and the Caribbean have greater frequency in the middle of the spectrum while Sub-Saharan Africa rises more towards dictatorships, and the Middle East and North Africa rise in frequency the most at the dictatorship end of the spectrum. There is not a linear relationship between region and regime type, but rather complex interactions. I would not expect my data to have a completely continuous "snake-line" relationship in  higher dimensional space, but rather more defined clusters/curves for some regions (such as the Middle East and North Africa) and less so in others.*
+### Questions 3 and 4: Data Snaking and Correspondence Analysis Conclusions
+*There is evidence of data snaking along the stages, with early stages along the bottom right, traveling up, back down and left across the center, and then ending along the center left at later stages. It makes sense for different species to be more or less prevalent along different ecological stages, rising and falling in frequency rather than all having simple linear relationships with time/stages. From our CCA plots we can see that Shagbark Hickory, Bur Oak, and Black Oak tend to be more prevalent in the pioneer/early stages. Black Cheery, American Elm, White Oak, and Butternut then become more prevalent along the early-middle stages, followed by Red Oak, Black Walnut, and Yellowbud Hickory. Ironwood, Basswood, Sugar Maple, Slippery Elm, and Common name are more prevalent around climax/late stages. Because of this, our data would likely curl in higher-dimensional space as explained in lecture, and so once it is projected down to lower dimensional space there is a "snake-like" winding structure.*
 
-
-### Question 4: Correspondence Analysis Conclusions
-
-*From our cca plots we can see that the Middle East and North Africa corresponds with more Royal Dictatorships, Latin America and the Caribbean as well as Europe and Central Asia corresponds with more Presidential Democracies, South Asia, East Asia and the Pacific corresponds with more Parliamentary Democracies and Military Dictatorships, and Sub-Saharan Africa corresponds with more Civilian Dictatorships. We have relatively high intertia/variance explained by our first two axes.*
+*From our analysis we see a clear pattern following from early to late stages, and identified species that tend to be more prevalent/occur more frequently at difference stages (groupings of which are stated above). We reduced the dimensionality of the data to visualize in two-dimensions/axes which explain around 74.91% of the total inertia/variance, and we found evidence of data snaking in higher dimensional space.*

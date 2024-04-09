@@ -66,3 +66,39 @@ text(forest_dca, "species", col = "blue", cex = 0.6)
 *There is evidence of data snaking along the stages, with early stages along the bottom right, traveling up, back down and left across the center, and then ending along the center left at later stages. It makes sense for different species to be more or less prevalent along different ecological stages, rising and falling in frequency rather than all having simple linear relationships with time/stages. From our CCA plots we can see that Shagbark Hickory, Bur Oak, and Black Oak tend to be more prevalent in the pioneer/early stages. Black Cheery, American Elm, White Oak, and Butternut then become more prevalent along the early-middle stages, followed by Red Oak, Black Walnut, and Yellowbud Hickory. Ironwood, Basswood, Sugar Maple, Slippery Elm, and Common name are more prevalent around climax/late stages. Because of this, our data would likely curl in higher-dimensional space as explained in lecture, and so once it is projected down to lower dimensional space there is a "snake-like" winding structure.*
 
 *From our analysis we see a clear pattern following from early to late stages, and identified species that tend to be more prevalent/occur more frequently at difference stages (groupings of which are stated above). We reduced the dimensionality of the data to visualize in two-dimensions/axes which explain around 74.91% of the total inertia/variance, and we found evidence of data snaking in higher dimensional space.*
+
+### Question 5: Multidimensional Scaling
+```{r}
+forest <- forest [, c(-1:-2, -17)]
+
+forest.mds1 <- metaMDS(forest, k = 1)
+forest.mds2 <- metaMDS(forest, k = 2)
+forest.mds3 <- metaMDS(forest, k = 3)
+forest.mds4 <- metaMDS(forest, k = 4)
+forest.mds5 <- metaMDS(forest, k = 5)
+
+plot(forest.mds1, type = "t", cex = 0.6)
+plot(forest.mds2, type = "t", cex = 0.6)
+plot(forest.mds3, type = "t", cex = 0.6)
+plot(forest.mds4, type = "t", cex = 0.6)
+plot(forest.mds5, type = "t", cex = 0.6)
+```
+
+*Given the forest data describes the relative abundance of each tree species at each sight, Bray-Curtis Dissimilarity is the best  measure for multidimensional scaling.*
+
+### Question 6: Stress and Screeplot
+
+*The stress values decrease with increasing dimensions, as expected, because higher dimensions can better accommodate the data's complexity. For 1-dimensional MDS, we achieved a stress value around 0.07798077, which indicates a reasonable fit, considering that MDS is trying to represent the data in just one dimension. As it was increased to 2 dimensions, the stress drops significantly to around 0.03280863, suggesting a much better fit and likely providing a more meaningful representation of your data. Although the stress continues to drop as number of dimensions is increased, increasing number of dimensions adds to the complexity. Therefore, to limit complexity while preserving a good fit it might make sense to stick with two dimensions, but a screeplot could help further in making this decision. The plots demonstrate a clear different between 1 and 2 dimensions. 2 and 3 dimensions are relatively similar. 4 and 5 dimensions are similar to each other, but have a very different distribution shape to 2 and 3 dimensions*
+
+```{r}
+stress <- c(forest.mds1$stress, forest.mds2$stress, forest.mds3$stress, forest.mds4$stress, forest.mds5$stress)
+plot(c(1:5), stress, col = "blue", lwd = 3, type = "b", xlab = "Dimensions")
+```
+
+*Based on the scree plot, it seems that the elbow is at 3, so it would make sense to stick with the three-dimensional solution.*
+
+### Question 7: Two-Dimensional Plot of MDS Results
+```{r}
+plot(forest.mds2, main = "2D MDS with Bray-Curtis Dissimilarity", type = "text")
+```
+

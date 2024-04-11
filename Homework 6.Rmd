@@ -9,7 +9,7 @@ output: word_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-**We are working with the Wiconsin.Forest.csv loaner dataset, as our own dataset is not appropraite for all the methods of ordination we discussed The group members are Vinny Sriram, Lee-Ann Kao, and Jennifer Centa. Our emails are vinny.sriram@yale.edu, lee-ann.kao@yale.edu, and jennifer.centa@yale.edu. **
+**We are working with the Wiconsin.Forest.csv loaner dataset, as our own dataset is not appropriate for all the methods of ordination we discussed. The group members are Vinny Sriram, Lee-Ann Kao, and Jennifer Centa. Our emails are vinny.sriram@yale.edu, lee-ann.kao@yale.edu, and jennifer.centa@yale.edu**
 
 ```{r}
 library(vegan)
@@ -99,6 +99,48 @@ plot(c(1:5), stress, col = "blue", lwd = 3, type = "b", xlab = "Dimensions")
 
 ### Question 7: Two-Dimensional Plot of MDS Results
 ```{r}
+plot(forest.mds2, main = "2D MDS with Bray-Curtis Dissimilarity", type = "text")
+```
+
+### Question 8: Overlay Continuous Variables to Interpret Ordination Axis & Calculate p-values
+
+```{r}
+#ordination plot
+fig <- ordiplot(forest.mds2, type = "none", cex = 1.1)
+text(fig, "species", col = "red", cex = 0.8)
+text(fig, "sites", col = "blue", cex = 0.8)
+
+fit <- envfit(forest.mds2, forestenv, permutations = 1000)
+plot(fit, col = "black", lwd = 3)
+fit   #stage is significant
+
+#wireplot with interpolated surface
+fig <- ordiplot(forest.mds2, type = "none", cex = 1.1, main = "NMDS for Forest Data")
+text(fig, "species", col = "red", cex = 0.7)
+text(fig, "sites", col = "black", cex = 0.7)
+plot(fit)
+tmp1 <- with(forestenv, ordisurf(forest.mds2, Stage, add = TRUE))
+
+#plot of functions for Stage of Forest
+vis.gam(tmp1, main = "Stage")
+```
+
+**From the p-value, we can conclude that the stage of the forest is significant. Not just that, but the fact that the vector is long indicates a strong correlation, meaning that changes in the environmental variable (stage) have a greater influence on the distribution of species in the ordination space. This signifies a positive and significant correlation between the stage of the forest and the distribution of species in the NMDS ordination space, indicating that the progression of forest succession is associated with changes in species composition. The wireplot's interpolated surface onto the ordination plot shows how the distribution of forest stages changes, and it identifies regions where specific stages of the forest are more prevalent and how they relate to species composition. For example, from the plots we can see that higher stage forests contain trees such as sugar maple and basswood as opposed to black oak.**
+
+### Question 9: Perform Canonical Correspondence Analysis
+
+```{r}
+forestcca <- cca(forest, forestenv, scale = "FALSE")
+plot(forestcca)
+
+#get summary information
+summary(forestcca)
+```
+
+
+### Question 10: Compare methods used and discuss conclusions reached
+
+**Correspondance Analysis revealed data snaking along succession stages, which shows non-linear relationships between species composition and forest succession stages, suggesting that different species exhibit varying prevalence across ecological stages. MDS in 2D represented the data in lower-dimensional space while preserving the variance, but based on the scree plot suggesting a three-dimensional solution, for further analysis we should consider a three-dimensional MDS. By overlaying the continuous variable of forest stage, the plots clearly show the strong relationship between forest stages and species composition. For this data set, environmental fitting and wireplot provided the clearest visualization of how the distribution of forest stages changes across the ordination space and their association with species composition. **
 plot(forest.mds2, main = "2D MDS with Bray-Curtis Dissimilarity", type = "text")
 ```
 

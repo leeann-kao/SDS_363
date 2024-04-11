@@ -141,6 +141,3 @@ summary(forestcca)
 ### Question 10: Compare methods used and discuss conclusions reached
 
 **Correspondance Analysis revealed data snaking along succession stages, which shows non-linear relationships between species composition and forest succession stages, suggesting that different species exhibit varying prevalence across ecological stages. MDS in 2D represented the data in lower-dimensional space while preserving the variance, but based on the scree plot suggesting a three-dimensional solution, for further analysis we should consider a three-dimensional MDS. By overlaying the continuous variable of forest stage, the plots clearly show the strong relationship between forest stages and species composition. For this data set, environmental fitting and wireplot provided the clearest visualization of how the distribution of forest stages changes across the ordination space and their association with species composition. **
-plot(forest.mds2, main = "2D MDS with Bray-Curtis Dissimilarity", type = "text")
-```
-

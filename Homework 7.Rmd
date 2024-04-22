@@ -1,0 +1,74 @@
+---
+title: "Homework 7"
+author: "Vinny Sriram, Lee-Ann Kao, Jennifer Centa"
+date: "2024-04-21"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**We are working with the loaner dataset on Ohio crime, as our own dataset was not appropraite for factor analysis due to low correlations betweeen variables. The group members are Vinny Sriram, Lee-Ann Kao, and Jennifer Centa. Our emails are vinny.sriram@yale.edu, lee-ann.kao@yale.edu, and jennifer.centa@yale.edu.**
+
+```{r}
+library(psych)
+library(car)
+library(corrplot)
+library(EFAtools)
+library("readxl")
+```
+
+### Set-Up
+```{r}
+#read data
+data <- read_excel("ohiocrime.xls")
+
+#keep only complete cases
+data <- data[complete.cases(data[, c(1:43)]), c(1:43)]
+dim(data)
+```
+
+
+### Question 1: Indicators Brainstorming
+
+
+### Question 2: Correlation matrix
+
+```{r}
+#Examine raw correlations
+round(cor(data),2)
+
+#Get correlation plot
+corrplot.mixed(cor(data), lower.col = "black", upper = "ellipse", tl.col = "black", number.cex = .5, tl.pos = "lt", tl.cex = .5, p.mat = cor.mtest(data, conf.level = .95)$p, sig.level = .05)
+```
+*There appear to be strong positive correlations between V42 and V43 with V47, V48, V51, and V52, which all ask about the rehabilitation of offenders. V51 is also highly correlated with V47 and V52, while being negatively correlated with V 49. Questions V57 through V68 (in the bottom right corner) all have significant positive correlations with each other and are related to religious attitudes. However, questions V10 through V39 are about proposed solutions for reducing crime rate but do not appear to have many significant correlations with each other.*
+
+
+### Question 3: KMO
+
+```{r}
+#This uses the KMO() function in the EFAtools package
+KMO(as.matrix(data))
+```
+*Our data is extremely suitable for factor analysis, with a "marvellous" above 0.90 KMO value. This is also easy to see from our correlation matrix, in which we can see high correlations among multiple variables, indicating groupings of homogeneous sets and that latent factors are probably present.*
+
+
+### Question 4: PCA Number of Latent Factors
+
+```{r}
+pc1 <- princomp(data, cor = TRUE)
+names(pc1)
+
+#make a screeplot  
+screeplot(pc1, type = "lines", col = "red", lwd = 2, pch = 19, cex = 1.2, 
+          main = "Scree Plot of Ohio Crime Survey")
+
+#perform parallel analysis
+source("http://www.reuningscherer.net/multivariate/R/parallel.r.txt")
+parallelplot(pc1)
+```
+*Scree Plot: There appears to be a distinct turn/"elbow" at component 4, and therefore this method would recommend three components.*
+*Parallel Analysis: Only the first three joints are above the Longman and Allen Method, and therefore this method would recommend three components. HOWEVER, it should be noted that we need to check if our data follows a multivariate normal distribution for parallel analysis to be appropriate.*
+*Both methods recommend retaining three latent factors.*
+

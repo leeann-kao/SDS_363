@@ -72,3 +72,64 @@ parallelplot(pc1)
 *Parallel Analysis: Only the first three joints are above the Longman and Allen Method, and therefore this method would recommend three components. HOWEVER, it should be noted that we need to check if our data follows a multivariate normal distribution for parallel analysis to be appropriate.*
 *Both methods recommend retaining three latent factors.*
 
+
+### Question 5: Series of Factor Analyses 
+
+```{r}
+#Principal Axis Factoring
+fact1 <- fa(data, nfactors = 3, fm = "pa")
+fact1
+
+###first two factors PAF
+plot(fact1$loadings[, c(1, 2)], pch = 18, col = 'red')
+abline(h = 0)
+abline(v = 0)
+text(fact1$loadings[, c(1, 2)], labels = names(data), cex = 0.8)
+
+###factors 1 and 3 PAF
+plot(fact1$loadings[, c(1,3)], pch = 18, col = 'red')
+abline(h = 0)
+abline(v = 0)
+text(fact1$loadings[, c(1,3)], labels = names(data), cex = 0.8)
+
+
+
+#Maximum Likelihood
+fact2 <- fa(data, nfactors = 3, fm = "ml")
+fact2
+
+###first two factors ML
+plot(fact2$loadings[, c(1, 2)], pch = 18, col = 'blue')
+abline(h = 0)
+abline(v = 0)
+text(fact2$loadings[, c(1, 2)], labels = names(data), cex = 0.8)
+
+###factors 1 and 3 ML
+plot(fact2$loadings[, c(1,3)], pch = 18, col = 'blue')
+abline(h = 0)
+abline(v = 0)
+text(fact2$loadings[, c(1,3)], labels = names(data), cex = 0.8)
+
+
+
+#RMSR to choose 'best' method
+
+###for PAF
+repro1 <- fact1$loadings%*%t(fact1$loadings)
+resid1 <- cor(data)-repro1
+round(resid1, 2)
+
+len <- length(resid1[upper.tri(resid1)])
+(RMSR1 <- sqrt(sum(resid1[upper.tri(resid1)]^2)/len))
+
+
+###for ML
+repro2 <- fact2$loadings%*%t(fact2$loadings)
+resid2 <- cor(data)-repro2
+round(resid2, 2)
+
+len <- length(resid2[upper.tri(resid2)])
+(RMSR2 <- sqrt(sum(resid2[upper.tri(resid2)]^2)/len))
+```
+
+*The RMSR value for PAF (0.06429209) is slightly lower than for ML (0.06742912), indicating a slightly better fit of the PAF model to the data.*

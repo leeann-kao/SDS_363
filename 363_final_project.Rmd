@@ -1,0 +1,574 @@
+---
+title: "Final Project"
+author: "Vinny Sriram, Lee-Ann Kao, Jennifer Centa"
+date: "2024-04-26"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=FALSE}
+par(ask=FALSE)
+#load relevant libraries
+library(ggplot2)
+library(aplpack)
+library(fpc)
+library(cluster)
+library(ape)
+library(amap)
+library(MASS)
+library(biotools)
+library(klaR)
+library(car)
+library(dplyr)
+library(lubridate)
+library(ggExtra)
+library(heplots)
+library(ks)
+library(vegan)
+library(vegan3d)
+library(mgcv)
+library(MASS)
+library(rgl)
+```
+
+```{r, echo=FALSE}
+#read csv
+data <- read.csv("data.csv")
+
+#subset to 2001-2004
+data <- subset(data, year == 2004)
+
+#subset to top regimes with more than 13 observations each (otherwise too few observations for the number of variables)
+data <- subset(data, regime %in% c(2, 3, 4))
+
+#eliminate duplicate countries & outliers
+data <- data[!duplicated(data[c('country')]), ]
+data <- data[data$country != "Chad", ]
+data <- data[data$country != "Singapore", ]
+```
+
+
+#Introduction (Background, motivation) – two paragraphs at most.
+
+
+#Design and Primary Questions (What are main questions to be answered, what tests will be used, design of study)
+
+
+#Data (Description of variables, how data collected, sources of error, questionable points) – variables often most easily listed as a table. Indicate whether each variable is continuous or categorical.
+
+
+#Descriptive plots, summary statistics
+```{r, echo=FALSE}
+#basics
+head(data)
+dim(data)
+
+#regime type
+table(data$regime)
+ggplot(data, aes(x=regime, fill=region)) + geom_histogram() + 
+  labs(title="Regime Type Frequency", x="Regime Type")
+
+#Log GDPC
+boxplot(data$loggdpc ~ data$regime, main = "Log GDPC by Regime Type", xlab = "Regime Type", ylab = "Log GDPC", col = "lightcyan")
+data %>%
+  group_by(regime) %>%
+  summarize(mean_loggdpc = mean(loggdpc, na.rm = TRUE),
+            sd_loggdpc = sd(loggdpc, na.rm = TRUE),
+            iqr_loggdpc = IQR(loggdpc, na.rm = TRUE),
+            min_loggdpc = min(loggdpc, na.rm = TRUE),
+            max_loggdpc = max(loggdpc, na.rm = TRUE))
+
+#Log Imports
+boxplot(data$logimp ~ data$regime, main = "Log Imports by Regime Type", xlab = "Regime Type", ylab = "Log Imports", col = "mistyrose")
+data %>%
+  group_by(regime) %>%
+  summarize(mean_logimp = mean(logimp, na.rm = TRUE),
+            sd_logimp = sd(logimp, na.rm = TRUE),
+            iqr_logimp = IQR(logimp, na.rm = TRUE),
+            min_logimp = min(logimp, na.rm = TRUE),
+            max_logimp = max(logimp, na.rm = TRUE))
+
+#CIRI Score
+boxplot(data$CIRI ~ data$regime, main = "CIRI Score by Regime Type", xlab = "Regime Type", ylab = "CIRI Score", col = "lightsalmon")
+data %>%
+  group_by(regime) %>%
+  summarize(mean_CIRI = mean(CIRI, na.rm = TRUE),
+            sd_CIRI = sd(CIRI, na.rm = TRUE),
+            iqr_CIRI = IQR(CIRI, na.rm = TRUE),
+            min_CIRI = min(CIRI, na.rm = TRUE),
+            max_CIRI = max(CIRI, na.rm = TRUE))
+```
+*[Insert discussion of descriptive plots/summary statistics]*
+
+
+
+#Multivariate Analysis and discussion of results. Also compare results of different methods. You should cover THREE of the multivariate techniques we discussed in class. Again, please don’t use both Factor analysis and PCA, and groups with 5 people must have at least 4 techniques.
+
+
+##Discriminant Analysis
+
+*We are going to perform discriminant analysis looking at 65 countries based on the characteristics of CIRI score, education, log exports, FDI score, log imports, and log GDP in determining regime type.*
+
+
+###Checking Discriminant Analysis Assumptions
+```{r, echo=FALSE}
+# Check multivariate normality within each group
+source("http://www.reuningscherer.net/multivariate/R/CSQPlot.r.txt")
+par(pty = "s", cex = 0.8, cex.main = 0.8)
+CSQPlot(data[data$regime == 2, c(4, 6:10)], label = "Presidential Democracy")
+CSQPlot(data[data$regime == 3, c(4, 6:10)], label = "Civilian Dictatorship")
+CSQPlot(data[data$regime == 4, c(4, 6:10)], label = "Military Dictatorship")
+
+# Covariance Compairson
+boxM(data[,c(4, 6:10)], data$regime)
+
+#Matrix Plots
+plot(data[, c(4, 6:10)], col = data[,12]+2, pch = data[,12] + 15, cex = 1.2)
+```
+*Overall, we meet the assumptions of Discriminant Analysis for our data, since we observe multivariate normality within our regime types and similarity of covariance matrices. Based on the Chi-Square Quantile Plots, each presidential democracies and civilian dictatorships have multivariate normal data because all of the data points remain within the 95% confidence bounds. Military dictatorships are relatively normal but appear to have tails that fall outside the 95% confidence bounds, so we must be careful of this. We can see that the covariance across groups is relatively similar, with the Box's M-test p-value now being 0.04349 > 0.01, so we can fail to reject the null hypothesis that the covariance across groups is the same and move forward with linear DA. Since the Box's M-test is very sensitive in larger samples, we can use a lower alpha of 0.01.*
+
+
+###Linear Discriminant Analysis
+```{r, echo=FALSE}
+#Linear Discriminant Analysis with equal priors
+(data.disc <- lda(data[, c(4, 6:10)], grouping = data$regime, priors = c(.333, .333, .333)))
+```
+*Linear Discriminant Analysis seems like the best model because the Box's M-Test indicated similar covariance across the groups. We have 2 significant discriminate functions (3 regime types - 1 = 2, which is the minimum compared to our number of variables). Because the eigenvectors are ordered according to discriminating ability, the first function has by far the greatest relative discriminating power. This can also be seen by the proportion of trace, where our first function has a score of 0.9396 compared to 0.0604 for the second function. These scores are the between-class variance that is explained by the discriminant functions or in other words, their relative discriminating power.*
+
+
+###Step-Wise Discriminant Analysis
+```{r, echo=FALSE}
+#Step-Wise Discriminant Analysis with equal priors
+step1 <- stepclass(regime ~ CIRI + educm + logexp + fdi + logimp + loggdpc, data = data, method = "lda", direction = "both", priors = c(.333, .333, .333), fold = nrow(data))
+
+par(mar=c(1,1,1,1))
+partimat(as.factor(data$regime) ~ data$CIRI + data$logimp, method = "lda")
+```
+*Performing step-wise dicriminant analysis indicates that the two variables CIRI score and log imports are the "best" discriminating variables achieving an improvement in discrimination score by over 5%. Plotting our data in the space spanned by CIRI score and log imports, we see that high CIRI score is associated with Presidential Democracies, low CIRI score and low log imports is associated with Military Dictatorships, and low CIRI score but high log imports is associated with Civilian Dictatorships. However, there are many observations that fall out of these categorizations, with an error rate of 0.385, indicating that these two variables still do not discriminate the best among regime types.*
+
+
+###MANOVA
+```{r, echo=FALSE}
+#MANOVA
+data.manova <- manova(as.matrix(data[, c(4, 6:10)]) ~ data$regime)
+summary.manova(data.manova, test = "Wilks")
+```
+*The p-value on our Wilk's Lambda test is 2.948e-05 < alpha at 0.05, so we reject the null hypothesis that the multivariate means are the same. In other words, there is statistical evidence that the multivariate group means among our variables (education, CIRI human rights score, log imports, log exports, FDI score, and log GDPC) are different among regime types.*
+
+
+###Classification Results
+```{r, echo=FALSE}
+#Classification Results
+print("Classification Results for Non-Cross-Validated Data")
+(ctraw <- table(data$regime, predict(data.disc)$class))
+round(sum(diag(prop.table(ctraw))), 2)
+
+print("Classification Results for Cross-Validated Data")
+data.discCV <- lda(data[, c(4, 6:10)], grouping = data$regime, CV = TRUE)
+(ctCV <- table(data$regime, data.discCV$class))
+round(sum(diag(prop.table(ctCV))), 2)
+```
+*Upon performing the linear discriminant analysis, we can see the classification accuracy is 0.63 for non cross-validated data and 0.51 for cross-validated data. Given there are three groups with relatively equal frequency, 0.63 is a good classification rate for discriminating ability among our axes. There is evidence for over-fitting in this case because as soon as we cross-validate our results, our overall percentage correct drops by 12%.*
+
+
+###Standardized Coefficients
+```{r}
+#standardized coefficients
+round(lda(scale(data[, c(4, 6:10)]), grouping = data$regime, priors = c(1/3, 1/3, 1/3))$scaling, 2)
+```
+*We would exclude log exports and fdi score from the list of important variables, as their average coefficients across the axes are smaller in magnitude than the rest (around 0.35). Therefore, we would consider CIRI score, education, log imports, and log GDPC to be the "best" discriminators among regime types However, it should be noted that log imports, log GDP, and CIRI score vary significantly in their coefficient magnitude between functions (from near 0 to near 1 for log imports and log GDP, and from near 1 to near 0 for CIRI score). This likely means that CIRI score and log imports/gdpc are competing to discriminate between regime types. The correlation between variables means that caution must be taken when making inferences about relative discriminating power.*
+
+
+###Score Plots
+```{r, echo=FALSE}
+#Score plots
+datalda <- lda(scale(data[, c(4, 6:10)]), grouping = data$regime)
+
+scores <- as.matrix(scale(data[, c(4, 6:10)]))%*%matrix(datalda$scaling, ncol = 2)
+
+plot(scores[,1], scores[,2], type = "n", main = "Linear DCA scores for Democracy & EU Aid data", xlab = "DCA Axis 1", ylab = "DCA Axis 2")
+
+datanames <- names(table(data[, 12]))
+
+for (i in 1:3){
+  points(scores[data$regime == datanames[i], 1],
+         scores[data$regime == datanames[i], 2], col = i+1, pch = 15+i, cex = 1.1)
+}
+
+legend("topright", legend = c("Presidential Democracy", "Civilian Dictatorship", "Military Dictatorship"), col = c(2:4), pch = c(16, 17, 18), cex = 0.7)
+```
+*While Presidential Democracy and the Dictatorships appear to be located on separate halves of DCA Axis 1, there is substantial overlap between the dictatorship regime types. The concentration of civilian and military dictatorship on the right 2/3 of the plot suggests that these regime types might share similarities in terms of the selected variables. This could be due to common characteristics or behaviors among dictatorships. This suggests that discriminating regime type based on our selected variables is challenging, but discriminating among democracies versus dictatorships could have potential.*
+
+
+##Cluster Analysis
+
+*We are going to perform cluster analysis looking at 65 countries based on the characteristics of CIRI score, education, log exports, FDI score, log imports, and log GDP in 2004 (65 objects and 6 variables).*
+
+
+###Appropriate Distance Metrics and Standardizing Our Data
+```{r, echo=FALSE}
+#standardize
+datanorm <- data[, c("CIRI", "educm", "logexp", "fdi", "logimp", "loggdpc")]
+rownames(datanorm) <- data[, 1]
+datanorm <- scale(na.omit(datanorm))
+```
+*All of our variables are continuous variables, and we are clustering based on our cases/objects. Because of this, distance metrics such as Euclidean distance and Manhattan distance (examples of Minkowski distance), as well as maximum distance, Squared Euclidean distance, and Sorenson distance, are most appropriate for our data. However, all of these measures are scale variant, meaning that we want to subtract the sample means and divide by the sample standard deviation to avoid some variables having more influence than others (or use Relative Euclidean distance). For out data there is no case in which we want more inherent variability to have more of an influence on the overall calculation of distance, and therefore we chose to standardize our data.*
+
+
+###Hierarchical Cluster Analysis
+```{r, echo=FALSE}
+#Techniques A: Euclidean distance + Complete Linkage
+
+#distance matrix using Euclidean distance
+dist1 <- dist(datanorm, method = "euclidean")
+
+#clustering using complete linkage
+clust1 <- hclust(dist1, method = "complete")
+
+#dendrogram
+plot(clust1, labels = rownames(datanorm), cex = 0.4, xlab = "", ylab = "Distance (Euclidean)", main = "Clustering of Countries (Complete Linkage)")
+
+
+
+#Techniques B: Manhattan distance + Ward's method
+
+#distance matrix using Manhattan distance
+dist2 <- dist(datanorm, method = "manhattan")
+
+#clustering using Ward's method
+clust2 <- hclust(dist2, method = "ward.D")
+
+#dendrogram
+plot(clust2, labels = rownames(datanorm), cex = 0.4, xlab = "", ylab = "Distance (Manhattan)", main = "Clustering of Countries (Ward's Method)")
+```
+*We performed Hierarchical Cluster Analysis with our data using two combinations of methods: Euclidean Distance and Complete Linkage, and Manhattan Distance and Ward's Method. With Euclidean Distance and Complete Linkage we observe relatively symmetrical trees. With Manhattan Distance and Ward's Method, the tree has larger distances between branches. The similar results but increased distance makes sense because Ward's method tends to produce similar results to complete linkage, but as you move up the distances increase quadratically rather than linearly, pushing individuals into discrete groups more rapidly.*
+
+
+###Number of Groups
+```{r, echo=FALSE}
+source("http://reuningscherer.net/multivariate/R/HClusEval3.R.txt")
+#Call the function
+hclus_eval(datanorm, dist_m = 'euclidean', clus_m = 'complete', plot_op = T, print_num = 15)
+```
+*By looking at the plots of R-squared, we can estimate that the optimal group number is either 2 or 4. The elbows of each line (RSQ, RMSSTD, and SPRSQ) are roughly at 2 and 4, with big increases/decreases up until that point, then moderate change afterwards. The plot of cluster distance supports using 4 clusters, with its first main elbow at 4.*
+
+
+###K-Means Clustering
+```{r, echo=FALSE}
+kdata <- datanorm
+n.lev <- 15 
+
+# Calculate the within groups sum of squared error (SSE) for the number of cluster solutions selected by the user
+wss <- rnorm(10)
+while (prod(wss==sort(wss,decreasing=T))==0) {
+  wss <- (nrow(kdata)-1)*sum(apply(kdata,2,var))
+  for (i in 2:n.lev) wss[i] <- sum(kmeans(kdata, centers=i)$withinss)}
+
+# Calculate the within groups SSE for 250 randomized data sets (based on the original input data)
+k.rand <- function(x){
+  km.rand <- matrix(sample(x),dim(x)[1],dim(x)[2])
+  rand.wss <- as.matrix(dim(x)[1]-1)*sum(apply(km.rand,2,var))
+  for (i in 2:n.lev) rand.wss[i] <- sum(kmeans(km.rand, centers=i)$withinss)
+  rand.wss <- as.matrix(rand.wss)
+  return(rand.wss)
+}
+
+rand.mat <- matrix(0,n.lev,250)
+
+k.1 <- function(x) { 
+  for (i in 1:250) {
+    r.mat <- as.matrix(suppressWarnings(k.rand(kdata)))
+    rand.mat[,i] <- r.mat}
+  return(rand.mat)
+}
+
+# Same function as above for data with < 3 column variables
+k.2.rand <- function(x){
+  rand.mat <- matrix(0,n.lev,250)
+  km.rand <- matrix(sample(x),dim(x)[1],dim(x)[2])
+  rand.wss <- as.matrix(dim(x)[1]-1)*sum(apply(km.rand,2,var))
+  for (i in 2:n.lev) rand.wss[i] <- sum(kmeans(km.rand, centers=i)$withinss)
+  rand.wss <- as.matrix(rand.wss)
+  return(rand.wss)
+}
+
+k.2 <- function(x){
+  for (i in 1:250) {
+    r.1 <- k.2.rand(kdata)
+    rand.mat[,i] <- r.1}
+  return(rand.mat)
+}
+
+# Determine if the data data table has > or < 3 variables and call appropriate function above
+if (dim(kdata)[2] == 2) { rand.mat <- k.2(kdata) } else { rand.mat <- k.1(kdata) }
+
+# Plot within groups SSE against all tested cluster solutions for actual and randomized data - 1st: Log scale, 2nd: Normal scale
+
+xrange <- range(1:n.lev)
+yrange <- range(log(rand.mat),log(wss))
+plot(xrange,yrange, type='n', xlab='Cluster Solution', ylab='Log of Within Group SSE', main='Cluster Solutions against Log of SSE')
+for (i in 1:250) lines(log(rand.mat[,i]),type='l',col='red')
+lines(log(wss), type="b", col='blue')
+legend('topright',c('Actual Data', '250 Random Runs'), col=c('blue', 'red'), lty=1)
+
+yrange <- range(rand.mat,wss)
+plot(xrange,yrange, type='n', xlab="Cluster Solution", ylab="Within Groups SSE", main="Cluster Solutions against SSE")
+for (i in 1:250) lines(rand.mat[,i],type='l',col='red')
+lines(1:n.lev, wss, type="b", col='blue')
+legend('topright',c('Actual Data', '250 Random Runs'), col=c('blue', 'red'), lty=1)
+
+# Calculate the mean and standard deviation of difference between SSE of actual data and SSE of 250 randomized datasets
+r.sse <- matrix(0,dim(rand.mat)[1],dim(rand.mat)[2])
+wss.1 <- as.matrix(wss)
+for (i in 1:dim(r.sse)[2]) {
+  r.temp <- abs(rand.mat[,i]-wss.1[,1])
+  r.sse[,i] <- r.temp}
+r.sse.m <- apply(r.sse,1,mean)
+r.sse.sd <- apply(r.sse,1,sd)
+r.sse.plus <- r.sse.m + r.sse.sd
+r.sse.min <- r.sse.m - r.sse.sd
+
+# Plot difference between actual SSE mean SSE from 250 randomized datasets - 1st: Log scale, 2nd: Normal scale 
+
+xrange <- range(1:n.lev)
+if (min(r.sse.min) < 0){
+   yrange <- range(log(r.sse.plus - min(r.sse.min)*1.05), log(r.sse.min - min(r.sse.min)*1.05))
+} else {
+   yrange <- range(log(r.sse.plus), log(r.sse.min))
+}
+
+plot(xrange,yrange, type='n',xlab='Cluster Solution', ylab='Log of SSE - Random SSE', main='Cluster Solustions against (Log of SSE - Random SSE)')
+lines(log(r.sse.m), type="b", col='blue')
+lines(log(r.sse.plus), type='l', col='red')
+lines(log(r.sse.min), type='l', col='red')
+legend('topright',c('SSE - random SSE', 'SD of SSE-random SSE'), col=c('blue', 'red'), lty=1)
+
+xrange <- range(1:n.lev)
+yrange <- range(r.sse.plus,r.sse.min)
+plot(xrange,yrange, type='n',xlab='Cluster Solution', ylab='SSE - Random SSE', main='Cluster Solutions against (SSE - Random SSE)')
+lines(r.sse.m, type="b", col='blue')
+lines(r.sse.plus, type='l', col='red')
+lines(r.sse.min, type='l', col='red')
+legend('topright',c('SSE - random SSE', 'SD of SSE-random SSE'), col = c('blue', 'red'), lty = 1)
+
+# Select the appropriate number of clusters- 2 because of SSE elbow
+clust.level <- 2
+
+# Apply K-means cluster solutions - append clusters to CSV file
+fit <- kmeans(kdata, clust.level)
+aggregate(kdata, by=list(fit$cluster), FUN=mean)
+clust.out <- fit$cluster
+kclust <- as.matrix(clust.out)
+kclust.out <- cbind(kclust, datanorm)
+write.table(kclust.out, file="kmeans_out.csv", sep=",")
+```
+*Running k-means clustering on our data, the results are not too far off from our estimated number of clusters from the plots, as the cluster solutions against SSE plot shows that there is an elbow around 2, with more than 2 clusters not helping us much. For this reason, 2 clusters was selected to apply K-means cluster solutions, which is shown in the two cluster solution in Discriminant Analysis space. That plot shows clear groupings, with a few overlaps.*
+
+
+###Democracy-Dictatorship Score
+```{r, echo=FALSE}
+data$dd <- data$regime
+data$dd[data$regime == 4] <- 3
+head(data)
+```
+*We created a new column classifying Presidential Democracies as 2 (democracy) and Civilian and Military Dictatorships as 3 (dictatorship).*
+
+
+###Results in PCA and DA Space
+```{r, echo=FALSE}
+# Display Principal Components plot of data with clusters identified
+
+clusplot(kdata, fit$cluster, shade = F, labels = 2, lines = 0, color = T, lty = 4, main = 'Principal Components plot showing K-means clusters', cex = 0.5)
+
+plotcluster(kdata, fit$cluster, main="Five Cluster Solution in DA Space",
+            xlab="First Discriminant Function", ylab="Second Discriminant Function")
+
+cluster_1 <- rownames(datanorm)[fit$cluster == 1]
+count = 0
+print("Countries in Cluster 1")
+print(cluster_1)
+for (i in 1:(length(cluster_1))){
+  if (data$dd[data$country == cluster_1[i]] == 3){
+    count = count + 1
+  }
+}
+print(paste("Fraction Dictatorships in Cluster 1", count/(length(cluster_1))))
+
+cluster_2 <- rownames(datanorm)[fit$cluster == 2]
+count = 0
+print("Countries in Cluster 2")
+print(cluster_2)
+for (i in 1:(length(cluster_2))){
+  if (data$dd[data$country == cluster_2[i]] == 2){
+    count = count + 1
+  }
+}
+print(paste("Fraction Democracies in Cluster 2", count/(length(cluster_2))))
+```
+*Based on the plots of the results in the discriminant analysis space and PCA space there appear to be 2 groups. Cluster 1 appears to correspond with countries that are dictatorships with a 71% accuracy, while Cluster 2 appears to correspond with countries that are democracies with a 59% accuracy. Similar to the results from Discriminant Analysis, this suggests that our selected variables form two groups based on democracy vs. dictatorship.*
+
+
+## MANOVA
+```{r}
+table(data$dd, data$region)
+data <- subset(data, region %in% c("East Asia and Pacific", 
+                                   "Latin America and Caribbean", "South Asia", 
+                                   "Sub-Saharan Africa"))
+data$dd <- as.factor(data$dd)
+data$region <- as.factor(data$region)
+```
+
+```{r, echo=FALSE}
+# Interaction plot for Log Exports
+interaction.plot(data$dd, data$region, data$logexp,
+                 lwd = 3, col = c("red", "blue", "green", "black"),
+                 trace.label = "Region", xlab = "Regime", ylab = "Log Exports",
+                 main = "Interaction Plot for Log Exports")
+
+# Interaction plot for Foreign Direct Investment
+interaction.plot(data$dd, data$region, data$fdi,
+                 lwd = 3, col = c("red", "blue", "green", "black"),
+                 trace.label = "Region", xlab = "Regime", ylab = "FDI",
+                 main = "Interaction Plot for Foreign Direct Investment")
+
+# Interaction plot for Log Imports
+interaction.plot(data$dd, data$region, data$logimp,
+                 lwd = 3, col = c("red", "blue", "green", "black"),
+                 trace.label = "Region", xlab = "Regime", ylab = "Log Imports",
+                 main = "Interaction Plot for Log Imports")
+
+# Interaction plot for Log GDP per Capita
+interaction.plot(data$dd, data$region, data$loggdpc,
+                 lwd = 3, col = c("red", "blue", "green", "black"),
+                 trace.label = "Region", xlab = "Regime", 
+                 ylab = "Log GDP per Capita",
+                 main = "Interaction Plot for Log GDP per Capita")
+```
+*There appear to be mild interactions based on our interaction plots, with mostly parallel lines except for a cross between East Asia and Pacific versus Latin America and the Caribbean with respect to FDI, a cross between Latin America and Caribbean and Sub-Saharan Africa in Log Imports, and a cross between Sub-Saharan Africa and Latin America and Carribian in Log Exports. *
+
+```{r, echo=FALSE}
+options(contrasts = c("contr.sum", "contr.poly"))
+
+MAOV <- lm(cbind(logexp, fdi, logimp, loggdpc) ~ dd * region, data = data)
+
+# Multivariate and univariate results
+summary(Anova(MAOV, type = 3), univariate = T)
+```
+*The p-values for all of the multivariate method tests on Democracy-Dictarship score, region, and the interaction between DD scores and region are less than alpha at 0.05, meaning we reject the null hypothesis that there is no difference in our response variables between regional groups and between democracies and dictatorships. For the univariate results, we appear to have statistically significant results for region and the interaction between region and DD score on log exports, significant results for dd and region on FDI score, and statistically significant results for region and the interaction between region and DD score on log GDP.*
+
+```{r, echo=FALSE}
+options(contrasts = c("contr.treatment", "contr.poly"))
+
+levels(data$dd)
+MAOV2<- lm(cbind(logexp, fdi, logimp, loggdpc) ~ dd, data = data)
+linearHypothesis(MAOV2, "-ddDictatorship = 3")
+
+logexpANOVA <- lm(logexp ~ dd, data = data)
+linearHypothesis(logexpANOVA, "-ddDictatorship = 3")
+
+logimpANOVA <- lm(logimp ~ dd, data = data)
+linearHypothesis(logimpANOVA, "-ddDictatorship = 3")
+```
+*The p-values for all of the multivariate method tests are less than alpha at 0.05, meaning we reject the null hypothesis that there is no difference in our response variables between democracies and dictatorships. In our univariate tests, we see that our p-value for log exports is 0.5236 > alpha at 0.05, so we fail to reject the null hypothesis that there is no difference in log exports between democracies and dictatorships. For log imports, our p-value is less than alpha at 0.05, so we reject the null hypothesis that there is no difference in log imports between democracies and dictatorships.*
+
+```{r, echo=FALSE}
+# Create scatter plots for each covariate-response pair
+plot1 <- ggplot(data, aes(x = EUaid, y = logexp)) +
+  geom_point() +
+  geom_smooth(method = "lm") +  
+  ggtitle("EUaid vs logexp")
+
+plot2 <- ggplot(data, aes(x = EUaid, y = fdi)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  ggtitle("EUaid vs fdi")
+
+plot3 <- ggplot(data, aes(x = EUaid, y = logimp)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  ggtitle("EUaid vs logimp")
+
+plot4 <- ggplot(data, aes(x = EUaid, y = loggdpc)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  ggtitle("EUaid vs loggdpc")
+
+library(gridExtra)
+grid.arrange(plot1, plot2, plot3, plot4, ncol = 2)
+
+options(contrasts = c("contr.sum", "contr.poly"))
+
+#Fit the model
+MAOVMod2 <- lm(cbind(logexp, fdi, logimp, loggdpc) ~ dd * region +  
+                 EUaid, data = data)
+
+#Multivariate results and univariate results with with type 3 Sum of squares
+summary(Anova(MAOVMod2, type = 3), univariate = T)
+
+mod1 <- lm(logexp ~ region + dd + region*dd + EUaid, data = data)
+mod2 <- lm(fdi ~ region + dd + region*dd + EUaid, data = data)
+mod3 <- lm(logimp ~ region + dd + region*dd + EUaid, data = data)
+mod4 <- lm(loggdpc ~ region + dd + region*dd + EUaid, data = data)
+
+#Type I Sum of Squares
+summary.aov(mod1)
+summary.aov(mod2)
+summary.aov(mod3)
+summary.aov(mod4)
+```
+*Based on our plots, there appear to be linear relationships between EU aid and all of our response variables. The p-values for all of the multivariate method tests on Democracy-Dictarship score, region, EU aid, and the interaction between DD scores and region are less than alpha at 0.05, meaning we reject the null hypothesis that there is no difference in our response variables between these groups.For the univariate results, we appear to have statistically significant results for region and EU aid on log exports, significant results for all variables except the interaction on FDI score, and statistically significant results for region, EU aid, and the interaction between region and DD score on both log imports and log GDP.*
+
+```{r, echo=FALSE}
+#Check residuals
+CSQPlot(MAOVMod2$residuals, label = "Residuals from GLM")
+
+modexp <- lm(logexp ~ dd * region +  EUaid, data = data)
+plot(modexp, which = c(1,2), pch = 19, col = 'red')
+
+modfdi <- lm(fdi ~ dd * region +  EUaid, data = data)
+plot(modfdi, which = c(1,2), pch = 19, col = 'orange')
+
+modlogimp <- lm(logimp ~ dd * region +  EUaid, data = data)
+plot(modlogimp, which = c(1,2), pch = 19, col = 'yellow')
+
+modloggdpc <- lm(loggdpc ~ dd * region +  EUaid, data = data)
+plot(modloggdpc, which = c(1,2), pch = 19, col = 'blue')
+
+# Use Box-Cox transformation for heavy-tailed FDI
+data$newfdi <- data$fdi - min(data$fdi, na.rm = T)*1.01
+modfdi2 <- lm(newfdi ~ dd * region +  EUaid, data = data)
+BC <- boxcox(modfdi2, optimize = T)
+(lambda <- BC$x[which.max(BC$y)])
+
+data$newfdi <- (data$fdi - min(data$fdi, na.rm = T)*1.01)^0.3
+
+modfdi2 <- lm(newfdi ~ dd * region +  EUaid, data = data)
+plot(modfdi2, which = c(1, 2), col = 'blue', pch = 19)
+
+#Fit the model
+Mod2 <- lm(cbind(logexp, newfdi, logimp, loggdpc) ~ dd * region +  
+             EUaid, data = data)
+
+#Multivariate and univariate results with type 3 Sum of squares
+summary(Anova(Mod2, type = 3), univariate = T)
+
+CSQPlot(Mod2$residuals, label = "Residuals from Data, modified FDI")
+```
+*Attempted to modify the heavy-skewed FDI data by using a box-cox transformation, which very slightly improved the QQ plot as well as the Chi-Square Quantiles Plot for Residuals from GLM, but ultimately more transformations are needed as it is still not multivariate normal.*
+
+```{r, echo=FALSE}
+(mrpp1 <- mrpp(data[,c("EUaid", "CIRI", "educm", "logexp", "fdi", "logimp", 
+                       "loggdpc", "demregion")], as.factor(data$country)))
+```
+
+
+#Conclusions and Discussion
+
+
+#Points for further analysis
+

@@ -40,7 +40,7 @@ library(rgl)
 #read csv
 data <- read.csv("data.csv")
 
-#subset to 2001-2004
+#subset to 2004
 data <- subset(data, year == 2004)
 
 #subset to top regimes with more than 13 observations each (otherwise too few observations for the number of variables)
@@ -110,9 +110,9 @@ data %>%
 #Multivariate Analysis and discussion of results. Also compare results of different methods. You should cover THREE of the multivariate techniques we discussed in class. Again, please don’t use both Factor analysis and PCA, and groups with 5 people must have at least 4 techniques.
 
 
-##Discriminant Analysis
+##Multivariate Method One: Discriminant Analysis
 
-*We are going to perform discriminant analysis looking at 65 countries based on the characteristics of CIRI score, education, log exports, FDI score, log imports, and log GDP in determining regime type.*
+*We are going to perform discriminant analysis looking at 65 countries based on the characteristics of CIRI score, education, log exports, FDI score, log imports, and log GDP in determining regime type in 2004.*
 
 
 ###Checking Discriminant Analysis Assumptions
@@ -205,7 +205,7 @@ legend("topright", legend = c("Presidential Democracy", "Civilian Dictatorship",
 *While Presidential Democracy and the Dictatorships appear to be located on separate halves of DCA Axis 1, there is substantial overlap between the dictatorship regime types. The concentration of civilian and military dictatorship on the right 2/3 of the plot suggests that these regime types might share similarities in terms of the selected variables. This could be due to common characteristics or behaviors among dictatorships. This suggests that discriminating regime type based on our selected variables is challenging, but discriminating among democracies versus dictatorships could have potential.*
 
 
-##Cluster Analysis
+##Multivariate Method Two: Cluster Analysis
 
 *We are going to perform cluster analysis looking at 65 countries based on the characteristics of CIRI score, education, log exports, FDI score, log imports, and log GDP in 2004 (65 objects and 6 variables).*
 
@@ -413,7 +413,10 @@ print(paste("Fraction Democracies in Cluster 2", count/(length(cluster_2))))
 *Based on the plots of the results in the discriminant analysis space and PCA space there appear to be 2 groups. Cluster 1 appears to correspond with countries that are dictatorships with a 71% accuracy, while Cluster 2 appears to correspond with countries that are democracies with a 59% accuracy. Similar to the results from Discriminant Analysis, this suggests that our selected variables form two groups based on democracy vs. dictatorship.*
 
 
-## MANOVA
+## Multivariate Method Three: MANOVA
+
+*We are going to perform MANOVA looking at countries based on the categorical factors of Democratic-Dictatorship and Region (subset to only include those in the categories of East Asia and Pacific, Latin America and Caribbean, South Asia, and Sub-Saharan Africa), and based on the characteristics of the continuous variables Log Exports, Foreign Direct Investment, Log Imports, and Log GDP per Capita in 2004. (59 objects and 4 variables)*
+
 ```{r}
 table(data$dd, data$region)
 data <- subset(data, region %in% c("East Asia and Pacific", 
@@ -423,6 +426,7 @@ data$dd <- as.factor(data$dd)
 data$region <- as.factor(data$region)
 ```
 
+###Interaction Plots for Response Variables
 ```{r, echo=FALSE}
 # Interaction plot for Log Exports
 interaction.plot(data$dd, data$region, data$logexp,
@@ -449,8 +453,9 @@ interaction.plot(data$dd, data$region, data$loggdpc,
                  ylab = "Log GDP per Capita",
                  main = "Interaction Plot for Log GDP per Capita")
 ```
-*There appear to be mild interactions based on our interaction plots, with mostly parallel lines except for a cross between East Asia and Pacific versus Latin America and the Caribbean with respect to FDI, a cross between Latin America and Caribbean and Sub-Saharan Africa in Log Imports, and a cross between Sub-Saharan Africa and Latin America and Carribian in Log Exports. *
+*With the interaction plots for each variable containing many crosses, they suggest that there are interactions between the factors for each region of the world. For example, the interaction plots for Log Exports suggest that there is an interaction between South Asia & East Asia and Pacific + Latin America and Caribbean + Sub-Saharan Africa, as the line for South Asia crosses through all three. On the other hand, East Asia and Pacific + Latin America and Caribbean + Sub-Saharan Africa move in a parallel fashion, meaning there is probably no interaction. By looking at the rest of the plots, it is clear which factors interact and which don't depending on whether the lines are parallel or not parallel (i.e. if they cross).*
 
+###Tests of Significance at Multivariate and Univariate Level
 ```{r, echo=FALSE}
 options(contrasts = c("contr.sum", "contr.poly"))
 
@@ -459,23 +464,30 @@ MAOV <- lm(cbind(logexp, fdi, logimp, loggdpc) ~ dd * region, data = data)
 # Multivariate and univariate results
 summary(Anova(MAOV, type = 3), univariate = T)
 ```
-*The p-values for all of the multivariate method tests on Democracy-Dictarship score, region, and the interaction between DD scores and region are less than alpha at 0.05, meaning we reject the null hypothesis that there is no difference in our response variables between regional groups and between democracies and dictatorships. For the univariate results, we appear to have statistically significant results for region and the interaction between region and DD score on log exports, significant results for dd and region on FDI score, and statistically significant results for region and the interaction between region and DD score on log GDP.*
 
+*The p-values for the multivariate method tests on Democracy-Dictatorship score, region (except for Roy), and the interaction between DD scores and region (except for Roy) are greater than alpha at 0.05, meaning we fail to reject the null hypothesis that there is no difference in our response variables between regional groups and between democracies and dictatorships. For the univariate results, we appear to have no statistically significant results for logexp, fdi, or logimp. We appear to have statistically significant results for region and the interaction between region and DD score on log GDP.*
+
+
+###Multivariate Contrasts
 ```{r, echo=FALSE}
 options(contrasts = c("contr.treatment", "contr.poly"))
 
+data$dd <- as.factor(data$dd)
 levels(data$dd)
+
 MAOV2<- lm(cbind(logexp, fdi, logimp, loggdpc) ~ dd, data = data)
-linearHypothesis(MAOV2, "-ddDictatorship = 3")
+linearHypothesis(MAOV2, "dd3 = 0")
 
 logexpANOVA <- lm(logexp ~ dd, data = data)
-linearHypothesis(logexpANOVA, "-ddDictatorship = 3")
+linearHypothesis(logexpANOVA, "dd3 = 0")
 
 logimpANOVA <- lm(logimp ~ dd, data = data)
-linearHypothesis(logimpANOVA, "-ddDictatorship = 3")
+linearHypothesis(logimpANOVA, "dd3 = 0")
 ```
-*The p-values for all of the multivariate method tests are less than alpha at 0.05, meaning we reject the null hypothesis that there is no difference in our response variables between democracies and dictatorships. In our univariate tests, we see that our p-value for log exports is 0.5236 > alpha at 0.05, so we fail to reject the null hypothesis that there is no difference in log exports between democracies and dictatorships. For log imports, our p-value is less than alpha at 0.05, so we reject the null hypothesis that there is no difference in log imports between democracies and dictatorships.*
+*The p-values for all of the multivariate method tests are less than alpha at 0.05, meaning we reject the null hypothesis that there is no difference in our response variables between democracies and dictatorships. In our univariate tests, we see that our p-value for log exports is 0.5189 > alpha at 0.05, so we fail to reject the null hypothesis that there is no difference in log exports between democracies and dictatorships. For log imports, our p-value is 0.19 > alpha at 0.05, so we fail to reject the null hypothesis that there is no difference in log imports between democracies and dictatorships.*
 
+
+###Add Continuous Variable and Fit as Multiple-Response Linear Model
 ```{r, echo=FALSE}
 # Create scatter plots for each covariate-response pair
 plot1 <- ggplot(data, aes(x = EUaid, y = logexp)) +
@@ -516,59 +528,24 @@ mod3 <- lm(logimp ~ region + dd + region*dd + EUaid, data = data)
 mod4 <- lm(loggdpc ~ region + dd + region*dd + EUaid, data = data)
 
 #Type I Sum of Squares
+
 summary.aov(mod1)
 summary.aov(mod2)
 summary.aov(mod3)
 summary.aov(mod4)
 ```
-*Based on our plots, there appear to be linear relationships between EU aid and all of our response variables. The p-values for all of the multivariate method tests on Democracy-Dictarship score, region, EU aid, and the interaction between DD scores and region are less than alpha at 0.05, meaning we reject the null hypothesis that there is no difference in our response variables between these groups.For the univariate results, we appear to have statistically significant results for region and EU aid on log exports, significant results for all variables except the interaction on FDI score, and statistically significant results for region, EU aid, and the interaction between region and DD score on both log imports and log GDP.*
+*Based on our plots, there appear to be very weak relationships between EU aid and all of our response variables. The p-values for the multivariate method tests on Democracy-Dictatorship score, region (except for Roy), and the interaction between DD scores and region (except for Pillai and Wilks) are greater than alpha at 0.05, meaning we fail to reject the null hypothesis that there is no difference in our response variables between these groups. The p-values for the multivariate method tests on EU aid are less than alpha at 0.05, meaning we reject the null hypothesis that there is no difference in our response variables between these groups. For the univariate results, we appear to have statistically significant results for EU aid on log exports, statistically significant results for DD scores on FDI, and statistically significant results for region, EUaid, and the interaction between region and DD score on loggdpc.*
 
+
+###Evaluation of Residuals (chi-square quantile plot)
 ```{r, echo=FALSE}
 #Check residuals
 CSQPlot(MAOVMod2$residuals, label = "Residuals from GLM")
-
-modexp <- lm(logexp ~ dd * region +  EUaid, data = data)
-plot(modexp, which = c(1,2), pch = 19, col = 'red')
-
-modfdi <- lm(fdi ~ dd * region +  EUaid, data = data)
-plot(modfdi, which = c(1,2), pch = 19, col = 'orange')
-
-modlogimp <- lm(logimp ~ dd * region +  EUaid, data = data)
-plot(modlogimp, which = c(1,2), pch = 19, col = 'yellow')
-
-modloggdpc <- lm(loggdpc ~ dd * region +  EUaid, data = data)
-plot(modloggdpc, which = c(1,2), pch = 19, col = 'blue')
-
-# Use Box-Cox transformation for heavy-tailed FDI
-data$newfdi <- data$fdi - min(data$fdi, na.rm = T)*1.01
-modfdi2 <- lm(newfdi ~ dd * region +  EUaid, data = data)
-BC <- boxcox(modfdi2, optimize = T)
-(lambda <- BC$x[which.max(BC$y)])
-
-data$newfdi <- (data$fdi - min(data$fdi, na.rm = T)*1.01)^0.3
-
-modfdi2 <- lm(newfdi ~ dd * region +  EUaid, data = data)
-plot(modfdi2, which = c(1, 2), col = 'blue', pch = 19)
-
-#Fit the model
-Mod2 <- lm(cbind(logexp, newfdi, logimp, loggdpc) ~ dd * region +  
-             EUaid, data = data)
-
-#Multivariate and univariate results with type 3 Sum of squares
-summary(Anova(Mod2, type = 3), univariate = T)
-
-CSQPlot(Mod2$residuals, label = "Residuals from Data, modified FDI")
 ```
-*Attempted to modify the heavy-skewed FDI data by using a box-cox transformation, which very slightly improved the QQ plot as well as the Chi-Square Quantiles Plot for Residuals from GLM, but ultimately more transformations are needed as it is still not multivariate normal.*
-
-```{r, echo=FALSE}
-(mrpp1 <- mrpp(data[,c("EUaid", "CIRI", "educm", "logexp", "fdi", "logimp", 
-                       "loggdpc", "demregion")], as.factor(data$country)))
-```
+*The resulting plot looks good – no evidence of serious departure from multivariate normality of the residuals as the data is within the 95% Confidence Interval Limits. This indicates that the assumptions made earlier from MANOVA regarding the residuals are met.*
 
 
 #Conclusions and Discussion
 
 
 #Points for further analysis
-
